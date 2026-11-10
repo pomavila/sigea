@@ -36,7 +36,7 @@ mediante sprints e historias de usuario.
 ## 3. Integrantes
 
 - Ramos Zamora, Michael Deivis
-- Adauto Toropoco, Cristian Pedro
+- Adauto Torpoco, Cristian Pedro
 - Rivera Pecho, Jennifer Milagros
 - Poma Vila, Nicolas André
 - Taipe Sulla, Fernando Clevin
