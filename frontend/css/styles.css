@@ -1,48 +1,200 @@
+/* =========================================================
+   SIGEA · Estilos compartidos por todas las pantallas
+   Color principal: azul oscuro #1F3864
+   (Los estilos propios de una sola pantalla van en su archivo,
+    por ejemplo registro-abonado.css)
+   ========================================================= */
 
-/* SIGEA - Sistema de Gestión de Estacionamiento */
-/* Sprint 1 - Estilos principales */
+/* 1. Variables CSS: se definen una vez y se reutilizan.
+      Si mañana cambia el color, solo se cambia aquí. */
+:root {
+  --sigea-primario: #1F3864;
+  --sigea-primario-hover: #172a4b;   /* un tono más oscuro para :hover */
+  --sigea-primario-claro: #e8edf5;   /* fondo suave para encabezados */
+  --sigea-fondo: #f4f6fa;
+}
 
 body {
-    font-family: Arial, sans-serif;
-    background-color: #f4f6f9;
-    min-height: 100vh;
+  background-color: var(--sigea-fondo);
+  min-height: 100vh;
 }
 
-.navbar {
-    background-color: #0d6efd;
-    padding: 15px;
+/* 2. Barra superior */
+.sigea-navbar {
+  background-color: var(--sigea-primario);
 }
 
-.navbar-brand {
-    font-size: 24px;
-    font-weight: bold;
+.sigea-navbar .nav-link.active {
+  font-weight: 600;
+  border-bottom: 2px solid #fff;
 }
 
-.card {
-    border-radius: 12px;
-    border: none;
+.sigea-titulo {
+  color: var(--sigea-primario);
+  font-weight: 600;
 }
 
-.card-body {
-    padding: 40px;
+/* 3. Tarjetas */
+.sigea-card {
+  border: none;
+  border-radius: 0.75rem;
+  box-shadow: 0 2px 8px rgba(31, 56, 100, 0.08);
 }
 
-h1 {
-    font-weight: bold;
-    margin-bottom: 20px;
+.sigea-card .card-header {
+  background-color: var(--sigea-primario-claro);
+  color: var(--sigea-primario);
+  font-weight: 600;
+  border-bottom: 2px solid var(--sigea-primario);
+  border-radius: 0.75rem 0.75rem 0 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
-.btn-primary {
-    border-radius: 8px;
-    padding: 10px 20px;
-    font-weight: bold;
+/* 4. Foco de los campos con el color del sistema (en vez del celeste de Bootstrap) */
+.form-control:focus,
+.form-select:focus {
+  border-color: var(--sigea-primario);
+  box-shadow: 0 0 0 0.2rem rgba(31, 56, 100, 0.25);
 }
 
-.btn-primary:hover {
-    background-color: #084298;
+/* Los campos con error mantienen el rojo aunque tengan foco */
+.form-control.is-invalid:focus,
+.form-select.is-invalid:focus {
+  border-color: var(--bs-form-invalid-border-color);
+  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
 }
 
-#mensaje {
-    font-weight: bold;
-    color: #198754;
+.invalid-feedback {
+  font-weight: 500;
+}
+
+/* 5. Botones del sistema */
+.btn-sigea {
+  background-color: var(--sigea-primario);
+  border-color: var(--sigea-primario);
+  color: #fff;
+}
+
+.btn-sigea:hover,
+.btn-sigea:focus {
+  background-color: var(--sigea-primario-hover);
+  border-color: var(--sigea-primario-hover);
+  color: #fff;
+}
+
+.btn-sigea:disabled {
+  background-color: var(--sigea-primario);
+  border-color: var(--sigea-primario);
+  color: #fff;
+  opacity: 0.7;
+}
+
+.btn-outline-sigea {
+  border-color: var(--sigea-primario);
+  color: var(--sigea-primario);
+}
+
+.btn-outline-sigea:hover,
+.btn-outline-sigea:focus,
+.btn-check:checked + .btn-outline-sigea {
+  background-color: var(--sigea-primario);
+  border-color: var(--sigea-primario);
+  color: #fff;
+}
+
+/* 6. Tablas */
+.sigea-tabla thead th {
+  background-color: var(--sigea-primario-claro);
+  color: var(--sigea-primario);
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  /* El título oculto de la columna "Acciones" (.visually-hidden) es position:absolute.
+     Con relative queda atado a su celda y no ensancha la página en el celular. */
+  position: relative;
+}
+
+.sigea-tabla td {
+  vertical-align: middle;
+}
+
+/* La primera columna (nombre) nunca se aplasta: si no cabe, la tabla se desliza */
+.sigea-tabla td:first-child {
+  min-width: 9.5rem;
+}
+
+/* Fila de un pago anulado: texto tachado y gris */
+.sigea-anulado td {
+  color: var(--bs-secondary-color);
+}
+
+.sigea-anulado .sigea-tachable {
+  text-decoration: line-through;
+}
+
+/* 7. Indicadores del panel (número grande + etiqueta) */
+.sigea-indicador {
+  border-left: 0.35rem solid var(--sigea-primario);
+}
+
+.sigea-indicador.es-verde    { border-left-color: var(--bs-success); }
+.sigea-indicador.es-amarillo { border-left-color: var(--bs-warning); }
+.sigea-indicador.es-rojo     { border-left-color: var(--bs-danger); }
+
+.sigea-indicador .valor {
+  font-size: 1.9rem;
+  font-weight: 700;
+  line-height: 1.1;
+  color: var(--sigea-primario);
+}
+
+/* 8. Pantalla de inicio de sesión */
+.sigea-login {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: linear-gradient(160deg, var(--sigea-primario) 0%, #2f5597 100%);
+}
+
+.sigea-login .card {
+  width: 100%;
+  max-width: 24rem;
+  border: none;
+  border-radius: 1rem;
+}
+
+.sigea-logo {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 4rem;
+  height: 4rem;
+  border-radius: 1rem;
+  background-color: var(--sigea-primario);
+  color: #fff;
+  font-size: 2rem;
+}
+
+/* 9. Modales */
+.sigea-modal-header {
+  background-color: var(--sigea-primario);
+  color: #fff;
+}
+
+/* 10. Celulares (menos de 576 px) */
+@media (max-width: 575.98px) {
+  /* Evita que iOS haga zoom al tocar un campo (lo hace si la letra es < 16 px) */
+  .form-control,
+  .form-select {
+    font-size: 1rem;
+  }
+
+  .sigea-indicador .valor {
+    font-size: 1.5rem;
+  }
 }
