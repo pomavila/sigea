@@ -16,7 +16,7 @@ process.env.JWT_SECRET = process.env.JWT_SECRET || 'clave-solo-para-pruebas';
 
 const { test, describe, before, after } = require('node:test');
 const assert = require('node:assert/strict');
-const bcrypt = require('bcryptjs');
+const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
 
 const { recrearBase } = require('../scripts/base-datos');
@@ -125,12 +125,12 @@ describe('Salud e inicio de sesión (T08 · RN-06)', () => {
   test('sin token, con token alterado o firmado con otra clave: 401', async () => {
     assert.equal((await api('GET', '/api/abonados')).status, 401);
     assert.equal((await api('GET', '/api/abonados', { token: tokens.caja + 'x' })).status, 401);
-    const falso = jwt.sign({ sub: 2, rol: 'GERENCIA' }, 'otra-clave', { expiresIn: '8h' });
+    const falso = jwt.sign({ id_usuario: 2, rol: 'GERENCIA' }, 'otra-clave', { expiresIn: '8h' });
     assert.equal((await api('GET', '/api/abonados', { token: falso })).status, 401);
   });
 
   test('un token vencido ya no sirve', async () => {
-    const vencido = jwt.sign({ sub: 1, rol: 'CAJA' }, process.env.JWT_SECRET, { expiresIn: -10 });
+    const vencido = jwt.sign({ id_usuario: 1, rol: 'CAJA' }, process.env.JWT_SECRET, { expiresIn: -10 });
     const r = await api('GET', '/api/abonados', { token: vencido });
     assert.equal(r.status, 401);
   });
@@ -138,8 +138,20 @@ describe('Salud e inicio de sesión (T08 · RN-06)', () => {
   test('GET /api/auth/perfil devuelve al usuario de la sesión', async () => {
     const r = await api('GET', '/api/auth/perfil', { token: tokens.gerencia });
     assert.equal(r.status, 200);
-    assert.equal(r.datos.usuario, 'gerencia01');
-    assert.equal(r.datos.rol, 'GERENCIA');
+    assert.equal(r.datos.usuario.usuario, 'gerencia01');
+    assert.equal(r.datos.usuario.rol, 'GERENCIA');
+  });
+
+  test('la ruta de prueba de rol solo deja pasar a GERENCIA', async () => {
+    assert.equal((await api('GET', '/api/auth/prueba-gerencia', { token: tokens.gerencia })).status, 200);
+    assert.equal((await api('GET', '/api/auth/prueba-gerencia', { token: tokens.caja })).status, 403);
+  });
+
+  test('un usuario desactivado pierde el acceso aunque su token siga vigente', async () => {
+    await pool.execute("UPDATE usuario SET activo = 0 WHERE usuario = 'operativo01'");
+    assert.equal((await api('GET', '/api/abonados', { token: tokens.operativo })).status, 401);
+    await pool.execute("UPDATE usuario SET activo = 1 WHERE usuario = 'operativo01'");
+    assert.equal((await api('GET', '/api/abonados', { token: tokens.operativo })).status, 200);
   });
 
   test('tras 5 intentos fallidos seguidos se bloquea el ingreso (429)', async () => {

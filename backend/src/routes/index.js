@@ -6,6 +6,7 @@
    GET     /salud                      público
    POST    /auth/login                 público
    GET     /auth/perfil                cualquier usuario con sesión
+   GET     /auth/prueba-gerencia       GERENCIA
    GET     /resumen                    cualquier usuario con sesión
    GET     /espacios                   cualquier usuario con sesión
    GET     /abonados                   cualquier usuario con sesión
@@ -22,10 +23,9 @@
 'use strict';
 
 const { Router } = require('express');
-const { verificarToken, permitirRoles } = require('../middlewares/auth');
-const { revisarBloqueo } = require('../middlewares/limiteLogin');
+const { verificarToken, permitirRoles } = require('../middlewares/auth.middleware');
 const { ROLES } = require('../config/seguridad');
-const authController = require('../controllers/auth.controller');
+const authRoutes = require('./auth.routes');
 const abonadoController = require('../controllers/abonado.controller');
 const pagoController = require('../controllers/pago.controller');
 
@@ -35,12 +35,11 @@ const router = Router();
 router.get('/salud', (req, res) => {
   res.status(200).json({ estado: 'ok' });
 });
-router.post('/auth/login', revisarBloqueo, authController.login);
+router.use('/auth', authRoutes); // login, perfil y prueba de rol (auth.routes.js)
 
 // ---------- Desde aquí todo exige haber iniciado sesión ----------
 router.use(verificarToken);
 
-router.get('/auth/perfil', authController.perfil);
 router.get('/resumen', abonadoController.resumen);
 router.get('/espacios', abonadoController.listarEspacios);
 
