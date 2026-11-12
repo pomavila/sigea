@@ -131,6 +131,13 @@ CREATE TABLE pago (
     medio_pago     ENUM('EFECTIVO','YAPE','PLIN','TRANSFERENCIA') NOT NULL,
     nro_operacion  VARCHAR(30)   NULL,                -- NULL en efectivo; único si existe
     id_usuario     INT UNSIGNED  NOT NULL,            -- quién registró el pago
+
+    -- RN-05: un pago no se borra, se ANULA (solo GERENCIA) y queda el rastro.
+    estado            ENUM('REGISTRADO','ANULADO') NOT NULL DEFAULT 'REGISTRADO',
+    anulado_por       INT UNSIGNED  NULL,             -- usuario GERENCIA que anuló
+    fecha_anulacion   DATETIME      NULL,
+    motivo_anulacion  VARCHAR(200)  NULL,
+
     CONSTRAINT pk_pago PRIMARY KEY (id_pago),
     CONSTRAINT uq_pago_nro_operacion UNIQUE (nro_operacion),  -- MySQL permite varios NULL
     CONSTRAINT ck_pago_monto    CHECK (monto > 0),
@@ -138,6 +145,8 @@ CREATE TABLE pago (
     CONSTRAINT fk_pago_contrato FOREIGN KEY (id_contrato) REFERENCES contrato (id_contrato)
         ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT fk_pago_usuario  FOREIGN KEY (id_usuario)  REFERENCES usuario  (id_usuario)
+        ON DELETE RESTRICT ON UPDATE CASCADE,
+    CONSTRAINT fk_pago_anulado_por FOREIGN KEY (anulado_por) REFERENCES usuario (id_usuario)
         ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
