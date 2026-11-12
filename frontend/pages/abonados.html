@@ -1,42 +1,129 @@
-
 <!DOCTYPE html>
+<!--
+  SIGEA - Sistema de Gestión de Estacionamiento y Abonados
+  UNICENTRO CAJAMARCA S.A.C. (Huancayo)
+  Sprint 1 · HU-01 Registro de abonados · Tarea T05
+  Pantalla: Listado de abonados con búsqueda y estado por colores
+-->
 <html lang="es">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport"
-          content="width=device-width, initial-scale=1.0">
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SIGEA · Abonados</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%231F3864'/%3E%3Ctext x='8' y='12' font-size='10' font-family='Arial' font-weight='bold' text-anchor='middle' fill='white'%3EP%3C/text%3E%3C/svg%3E">
 
-    <title>SIGEA - Abonados</title>
-
-    <link
-      href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-      rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
+  <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
+  <link href="../css/styles.css" rel="stylesheet">
 </head>
+<body>
 
-<body class="bg-light">
-
-    <div class="container mt-5">
-
-        <h1 class="text-primary">
-            Gestión de Abonados
-        </h1>
-
-        <p>
-            SIGEA - UNICENTRO CAJAMARCA S.A.C.
-        </p>
-
-        <div class="alert alert-info">
-            Módulo HU-01:
-            Registro de abonados.
-            Funcionalidad en desarrollo.
+  <!-- ============ BARRA SUPERIOR ============ -->
+  <nav class="navbar navbar-expand-md navbar-dark sigea-navbar">
+    <div class="container">
+      <a class="navbar-brand fw-semibold" href="../index.html">
+        <i class="bi bi-p-square-fill me-2" aria-hidden="true"></i>SIGEA
+      </a>
+      <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#menu"
+              aria-controls="menu" aria-expanded="false" aria-label="Abrir menú">
+        <span class="navbar-toggler-icon"></span>
+      </button>
+      <div class="collapse navbar-collapse" id="menu">
+        <ul class="navbar-nav me-auto">
+          <li class="nav-item"><a class="nav-link" href="../index.html">Panel</a></li>
+          <li class="nav-item"><a class="nav-link active" aria-current="page" href="abonados.html">Abonados</a></li>
+          <li class="nav-item" data-solo-escritura><a class="nav-link" href="registro-abonado.html">Nuevo abonado</a></li>
+        </ul>
+        <div class="d-flex align-items-center gap-3 text-white py-2 py-md-0">
+          <span class="small">
+            <i class="bi bi-person-circle me-1" aria-hidden="true"></i><span id="usuarioNombre"></span>
+            · <span id="usuarioRol"></span>
+          </span>
+          <button type="button" class="btn btn-sm btn-outline-light" id="btnSalir">
+            <i class="bi bi-box-arrow-right me-1" aria-hidden="true"></i>Salir
+          </button>
         </div>
-
-        <a href="../index.html"
-           class="btn btn-primary">
-            Volver al inicio
-        </a>
-
+      </div>
     </div>
+  </nav>
 
+  <main class="container py-4">
+
+    <header class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-4">
+      <div>
+        <h1 class="h3 sigea-titulo mb-1">Abonados</h1>
+        <p class="text-muted mb-0" id="contador" aria-live="polite">Cargando...</p>
+      </div>
+      <a class="btn btn-sigea" href="registro-abonado.html" data-solo-escritura>
+        <i class="bi bi-person-plus-fill me-1" aria-hidden="true"></i>Nuevo abonado
+      </a>
+    </header>
+
+    <div id="alerta" class="alert d-none" role="alert"></div>
+
+    <!-- ============ BÚSQUEDA Y FILTRO ============ -->
+    <section class="card sigea-card mb-4">
+      <div class="card-body">
+        <div class="row g-3 align-items-end">
+
+          <div class="col-12 col-md-6">
+            <label for="buscar" class="form-label">Buscar</label>
+            <div class="input-group">
+              <span class="input-group-text"><i class="bi bi-search" aria-hidden="true"></i></span>
+              <input type="search" class="form-control" id="buscar" maxlength="60"
+                     placeholder="Nombre, apellido, DNI o placa" autocomplete="off">
+            </div>
+          </div>
+
+          <!-- Filtro por estado (RN-01). Son botones de opción: solo uno activo a la vez -->
+          <div class="col-12 col-md-6">
+            <span class="form-label d-block" id="etiquetaEstado">Estado</span>
+            <div class="btn-group w-100 flex-wrap" role="group" aria-labelledby="etiquetaEstado">
+              <input type="radio" class="btn-check" name="estado" id="estTodos" value="" checked>
+              <label class="btn btn-outline-sigea" for="estTodos">Todos</label>
+
+              <input type="radio" class="btn-check" name="estado" id="estAlDia" value="AL_DIA">
+              <label class="btn btn-outline-sigea" for="estAlDia">Al día</label>
+
+              <input type="radio" class="btn-check" name="estado" id="estPorVencer" value="POR_VENCER">
+              <label class="btn btn-outline-sigea" for="estPorVencer">Por vencer</label>
+
+              <input type="radio" class="btn-check" name="estado" id="estVencido" value="VENCIDO">
+              <label class="btn btn-outline-sigea" for="estVencido">Vencidos</label>
+            </div>
+          </div>
+
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ TABLA ============ -->
+    <section class="card sigea-card">
+      <div class="table-responsive">
+        <table class="table table-hover sigea-tabla mb-0">
+          <thead>
+            <tr>
+              <th scope="col">Abonado</th>
+              <th scope="col" class="d-none d-md-table-cell">Vehículo</th>
+              <th scope="col" class="d-none d-sm-table-cell">Espacio</th>
+              <th scope="col" class="d-none d-lg-table-cell">Pagado hasta</th>
+              <th scope="col">Estado</th>
+              <th scope="col" class="text-end">Saldo</th>
+              <th scope="col"><span class="visually-hidden">Acciones</span></th>
+            </tr>
+          </thead>
+          <tbody id="tablaAbonados">
+            <tr><td colspan="7" class="text-center text-muted py-4">Cargando...</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+  </main>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+  <script src="../js/config.js"></script>
+  <script src="../js/sigea.js"></script>
+  <script src="../js/abonados.js"></script>
 </body>
 </html>
