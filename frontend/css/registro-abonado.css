@@ -1,48 +1,8 @@
 /* =========================================================
-   SIGEA · Estilos de la pantalla Registro de abonado (T03)
-   Color principal: azul oscuro #1F3864
+   SIGEA · Estilos propios de la pantalla Registro de abonado (T03)
+   Los estilos comunes (colores, tarjetas, botones, campos) están
+   en styles.css, que se carga antes que este archivo.
    ========================================================= */
-
-/* 1. Variables CSS: se definen una vez y se reutilizan.
-      Si mañana cambia el color, solo se cambia aquí. */
-:root {
-  --sigea-primario: #1F3864;
-  --sigea-primario-hover: #172a4b;   /* un tono más oscuro para :hover */
-  --sigea-primario-claro: #e8edf5;   /* fondo suave para encabezados */
-  --sigea-fondo: #f4f6fa;
-}
-
-body {
-  background-color: var(--sigea-fondo);
-}
-
-/* 2. Barra superior */
-.sigea-navbar {
-  background-color: var(--sigea-primario);
-}
-
-.sigea-titulo {
-  color: var(--sigea-primario);
-  font-weight: 600;
-}
-
-/* 3. Tarjetas de cada sección */
-.sigea-card {
-  border: none;
-  border-radius: 0.75rem;
-  box-shadow: 0 2px 8px rgba(31, 56, 100, 0.08);
-}
-
-.sigea-card .card-header {
-  background-color: var(--sigea-primario-claro);
-  color: var(--sigea-primario);
-  font-weight: 600;
-  border-bottom: 2px solid var(--sigea-primario);
-  border-radius: 0.75rem 0.75rem 0 0;
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
 
 /* Círculo con el número de sección (1, 2, 3) */
 .sigea-paso {
@@ -57,47 +17,9 @@ body {
   font-size: 0.9rem;
 }
 
-/* 4. Foco de los campos con el color del sistema (en vez del celeste de Bootstrap) */
-.form-control:focus,
-.form-select:focus {
-  border-color: var(--sigea-primario);
-  box-shadow: 0 0 0 0.2rem rgba(31, 56, 100, 0.25);
-}
-
-/* Los campos con error mantienen el rojo aunque tengan foco */
-.form-control.is-invalid:focus,
-.form-select.is-invalid:focus {
-  border-color: var(--bs-form-invalid-border-color);
-  box-shadow: 0 0 0 0.2rem rgba(220, 53, 69, 0.25);
-}
-
-/* Mensaje de error: rojo y un poco más visible */
-.invalid-feedback {
-  font-weight: 500;
-}
-
-/* 5. Botón principal del sistema */
-.btn-sigea {
-  background-color: var(--sigea-primario);
-  border-color: var(--sigea-primario);
-  color: #fff;
-}
-
-.btn-sigea:hover,
-.btn-sigea:focus {
-  background-color: var(--sigea-primario-hover);
-  border-color: var(--sigea-primario-hover);
-  color: #fff;
-}
-
-.btn-sigea:disabled {
-  background-color: var(--sigea-primario);
-  opacity: 0.7;
-}
-
-/* 6. Zona de botones
-      PC: alineados a la derecha.
-      Celular: ocupan todo el ancho y quedan fijos abajo (fácil de tocar con el pulgar). */
+/* Zona de botones
+   PC: alineados a la derecha.
+   Celular: ocupan todo el ancho y quedan fijos abajo (fácil de tocar con el pulgar). */
 .sigea-acciones {
   display: flex;
   justify-content: flex-end;
@@ -118,16 +40,4 @@ body {
     width: 100%;
     padding: 0.75rem;
   }
-
-  /* Evita que iOS haga zoom al tocar un campo (lo hace si la letra es < 16 px) */
-  .form-control,
-  .form-select {
-    font-size: 1rem;
-  }
-}
-
-/* 7. Modal de confirmación */
-.sigea-modal-header {
-  background-color: var(--sigea-primario);
-  color: #fff;
 }

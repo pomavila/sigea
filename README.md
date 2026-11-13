@@ -59,15 +59,13 @@ mediante sprints e historias de usuario.
 - mysql2
 
 ### Seguridad
-- JWT (JSON Web Token)
-- bcrypt
+- JWT (JSON Web Token), sesión de 8 horas
+- bcrypt (contraseñas cifradas)
+- Control de acceso por roles: CAJA, GERENCIA y OPERATIVO
 
 ### Control de versiones
 - Git
 - GitHub
-
-**Nota:** JWT y bcrypt están contemplados para la
-implementación posterior de la autenticación.
 
 ## 5. Objetivo del proyecto
 
@@ -106,34 +104,50 @@ sigea/
 |
 |-- backend/
 |   |-- src/
-|   |   |-- config/
-|   |   |-- controllers/
-|   |   |-- middlewares/
-|   |   |-- models/
-|   |   |-- routes/
+|   |   |-- config/        conexión a MySQL y configuración de seguridad
+|   |   |-- controllers/   reciben la petición y devuelven la respuesta
+|   |   |-- middlewares/   token JWT, roles, límite de intentos, errores
+|   |   |-- models/        consultas SQL (únicos archivos que hablan con MySQL)
+|   |   |-- routes/        rutas de la API REST
+|   |   |-- services/      reglas de negocio RN-01 y RN-02 (estado y saldo)
+|   |   |-- utils/         fechas y errores
+|   |   |-- validators/    validación de datos (RN-03)
 |   |
+|   |-- scripts/           crear usuarios y reiniciar la base de datos
+|   |-- tests/             pruebas automáticas (CP-01 a CP-10)
 |   |-- app.js
 |   |-- package.json
-|   |-- package-lock.json
 |   |-- .env.example
 |
 |-- frontend/
 |   |-- css/
-|   |   |-- styles.css
+|   |   |-- styles.css             estilos comunes
+|   |   |-- registro-abonado.css
 |   |
 |   |-- js/
-|   |   |-- app.js
+|   |   |-- config.js              dirección de la API
+|   |   |-- sigea.js               sesión, llamadas a la API y formato
+|   |   |-- login.js
+|   |   |-- panel.js
+|   |   |-- abonados.js
+|   |   |-- registro-abonado.js
+|   |   |-- pagos.js
 |   |
 |   |-- pages/
-|   |   |-- abonados.html
+|   |   |-- login.html             inicio de sesión
+|   |   |-- abonados.html          listado con búsqueda y estado
+|   |   |-- registro-abonado.html  registro de abonado y contrato
+|   |   |-- pagos.html             estado de cuenta, pago e historial
 |   |
-|   |-- index.html
+|   |-- index.html                 panel de cobranza
 |
 |-- database/
 |   |-- schema.sql
 |   |-- seed.sql
+|   |-- migrations/
 |
 |-- docs/
+|   |-- API.md
 |
 |-- .github/
 |   |-- pull_request_template.md
@@ -206,20 +220,30 @@ El archivo `.env` no debe subirse a GitHub.
 
 ### Paso 5. Preparar la base de datos
 
-1. Iniciar MySQL desde XAMPP o el servidor local.
-2. Abrir phpMyAdmin.
-3. Ejecutar el archivo `database/schema.sql`.
-4. Verificar que exista la base de datos `sigea_db`.
+**Opción A (recomendada).** Con MySQL encendido, desde la carpeta
+`backend` ejecutar:
 
-El archivo `seed.sql` queda preparado para
-incorporar datos iniciales posteriormente.
+```bash
+npm run db:reset
+```
+
+El comando crea la base `sigea_db` con sus tablas
+(`database/schema.sql`) y los datos de prueba
+(`database/seed.sql`). **Borra los datos que tuviera esa base**,
+por eso pide confirmación.
+
+**Opción B (manual).** En MySQL Workbench o phpMyAdmin ejecutar
+`database/schema.sql` y luego `database/seed.sql`.
+
+Si la base ya existía con el modelo anterior de T01, ejecutar una
+sola vez `database/migrations/001_pago_anulacion.sql`.
 
 ### Paso 6. Ejecutar el backend
 
 Desde la carpeta `backend`, ejecutar:
 
 ```bash
-node app.js
+npm start
 ```
 
 Si la conexión funciona correctamente,
@@ -228,7 +252,11 @@ el servidor mostrará mensajes similares a:
 ```text
 Conexión a MySQL exitosa
 SIGEA ejecutándose en puerto 3000
+Abrir en el navegador: http://localhost:3000
 ```
+
+Durante el desarrollo se puede usar `npm run dev`, que reinicia
+el servidor cada vez que se guarda un archivo.
 
 ### Paso 7. Verificar la API REST
 
@@ -244,15 +272,33 @@ Respuesta esperada:
 }
 ```
 
-### Paso 8. Ejecutar el frontend
+### Paso 8. Abrir el sistema
 
-Abrir el archivo:
+El mismo servidor entrega el frontend. Abrir en el navegador:
 
-`frontend/index.html`
+http://localhost:3000
 
-en un navegador web.
+Aparece la pantalla de inicio de sesión. Los usuarios de prueba
+(`caja01` y `gerencia01`) y sus contraseñas están documentados al
+inicio de `database/seed.sql`. Son solo para desarrollo.
 
-La página mostrará la interfaz inicial de SIGEA.
+Para crear otro usuario:
+
+```bash
+node scripts/crear-usuario.js
+```
+
+### Paso 9. Ejecutar las pruebas automáticas
+
+Desde la carpeta `backend`:
+
+```bash
+npm test
+```
+
+Las pruebas cubren los casos CP-01 a CP-10 del Sprint 1. Usan una
+base aparte llamada `sigea_test`, que se crea sola; no modifican
+`sigea_db`.
 
 ## 10. Organización de ramas Git
 
@@ -312,19 +358,35 @@ La plantilla se encuentra en:
 
 ## 14. Estado actual del proyecto
 
-**Sprint 1 - Configuración inicial**
+**Sprint 1 - Abonados y cuentas por cobrar**
 
-Componentes preparados:
+Funcionalidades implementadas:
 
-- Repositorio Git y GitHub.
-- Estructura inicial del frontend.
-- Servidor backend con Express.
-- Conexión inicial a MySQL.
-- Endpoint de salud `/api/salud`.
-- Archivos iniciales de base de datos.
-- Plantilla de Pull Requests.
-- Documentación inicial.
+**HU-01: Registro de abonados**
 
-Las funcionalidades completas de HU-01 y HU-02
-se desarrollarán en las siguientes tareas del Sprint.
+- Registro de abonado, vehículo y contrato en una sola transacción.
+- Validación de DNI, celular y campos obligatorios (RN-03).
+- Un espacio solo admite un contrato vigente (RN-04).
+- Listado con búsqueda por nombre, apellido, DNI o placa.
+- Estado de cada abonado: al día, por vencer o vencido (RN-01).
 
+**HU-02: Pagos y saldos pendientes**
+
+- Inicio de sesión con JWT de 8 horas y contraseñas con bcrypt (RN-06).
+- Registro de pagos por meses, con periodo calculado por el sistema.
+- Saldo pendiente = meses adeudados × tarifa mensual (RN-02).
+- Historial de pagos del más reciente al más antiguo.
+- Solo CAJA y GERENCIA registran pagos; solo GERENCIA anula (RN-05).
+
+**Reglas de negocio**
+
+| Regla | Descripción |
+|-------|-------------|
+| RN-01 | Al día: el periodo pagado vence en más de 5 días. Por vencer: vence en 0 a 5 días. Vencido: la fecha ya pasó. |
+| RN-02 | Saldo pendiente = meses adeudados × tarifa mensual. |
+| RN-03 | DNI de 8 dígitos; celular de 9 dígitos que empieza en 9; nombres, dirección, vehículo y espacio obligatorios. |
+| RN-04 | Un espacio solo puede tener un contrato vigente. |
+| RN-05 | CAJA y GERENCIA registran pagos; solo GERENCIA anula. |
+| RN-06 | Contraseñas cifradas con bcrypt; la sesión expira a las 8 horas. |
+
+La descripción de cada ruta de la API está en `docs/API.md`.

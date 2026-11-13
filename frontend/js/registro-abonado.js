@@ -1,56 +1,24 @@
 /* =========================================================
    SIGEA · Registro de abonado y contrato (T03 - HU-01)
    JavaScript puro (sin librerías, solo Bootstrap para el modal)
+   Usa la API real:  GET /api/espacios  y  POST /api/abonados
+   (las llamadas pasan por SIGEA.api, definido en sigea.js)
 
    Partes del archivo:
-     1. Configuración
-     2. Datos simulados (mientras no exista la API)
-     3. Referencias a los elementos del HTML
-     4. Utilidades de fechas
-     5. Reglas de validación (RN-03 y reglas del contrato)
-     6. Mostrar / limpiar errores
-     7. Select de espacios libres (RN-04)
-     8. Armar los datos y enviarlos (simulado o con fetch)
-     9. Confirmación y limpieza del formulario
-    10. Eventos (lo que pasa cuando el usuario interactúa)
+     1. Referencias a los elementos del HTML
+     2. Utilidades de fechas
+     3. Reglas de validación (RN-03 y reglas del contrato)
+     4. Mostrar / limpiar errores
+     5. Select de espacios libres (RN-04)
+     6. Armar los datos y enviarlos a la API
+     7. Confirmación y limpieza del formulario
+     8. Eventos (lo que pasa cuando el usuario interactúa)
    ========================================================= */
 
 'use strict'; // modo estricto: el navegador avisa de errores comunes
 
 /* ---------------------------------------------------------
-   1. CONFIGURACIÓN
-   USAR_API = false -> trabaja con datos simulados.
-   Cuando Fernando termine POST /api/abonados, se cambia a true.
-   --------------------------------------------------------- */
-const CONFIG = {
-  USAR_API: false,
-  API_URL: 'http://localhost:3000/api'
-};
-
-/* ---------------------------------------------------------
-   2. DATOS SIMULADOS
-   Arreglo de espacios del estacionamiento. Cada espacio tiene
-   un tipo y un estado (LIBRE u OCUPADO).
-   --------------------------------------------------------- */
-const espaciosSimulados = [
-  // Mismos datos y nombres de columna que database/seed.sql (tabla espacio)
-  { id_espacio: 1,  codigo: 'T-01', tipo: 'TECHADO',  estado: 'OCUPADO' },
-  { id_espacio: 2,  codigo: 'T-02', tipo: 'TECHADO',  estado: 'OCUPADO' },
-  { id_espacio: 3,  codigo: 'T-03', tipo: 'TECHADO',  estado: 'LIBRE' },
-  { id_espacio: 4,  codigo: 'T-04', tipo: 'TECHADO',  estado: 'LIBRE' },
-  { id_espacio: 5,  codigo: 'E-01', tipo: 'EXTERIOR', estado: 'OCUPADO' },
-  { id_espacio: 6,  codigo: 'E-02', tipo: 'EXTERIOR', estado: 'OCUPADO' },
-  { id_espacio: 7,  codigo: 'E-03', tipo: 'EXTERIOR', estado: 'OCUPADO' },
-  { id_espacio: 8,  codigo: 'E-04', tipo: 'EXTERIOR', estado: 'LIBRE' },
-  { id_espacio: 9,  codigo: 'E-05', tipo: 'EXTERIOR', estado: 'LIBRE' },
-  { id_espacio: 10, codigo: 'A-01', tipo: 'ALMACEN',  estado: 'LIBRE' }
-];
-
-// Aquí se guardan los abonados registrados en modo simulado (solo en memoria)
-const abonadosSimulados = [];
-
-/* ---------------------------------------------------------
-   3. REFERENCIAS AL HTML
+   1. REFERENCIAS AL HTML
    Se buscan una sola vez y se reutilizan (más eficiente).
    --------------------------------------------------------- */
 const form = document.getElementById('formAbonado');
@@ -75,7 +43,7 @@ const CAMPOS = [
 let intentoEnvio = false;
 
 /* ---------------------------------------------------------
-   4. UTILIDADES DE FECHAS
+   2. UTILIDADES DE FECHAS
    Ojo: new Date().toISOString() usa hora UTC. En Perú (UTC-5),
    después de las 7 p. m. daría la fecha de MAÑANA. Por eso
    armamos la fecha con la hora local.
@@ -101,7 +69,7 @@ function sumarDias(texto, dias) {
 }
 
 /* ---------------------------------------------------------
-   5. REGLAS DE VALIDACIÓN
+   3. REGLAS DE VALIDACIÓN
    Cada regla recibe el valor del campo y devuelve:
      - ''        si es válido
      - 'mensaje' si hay error
@@ -167,12 +135,8 @@ const reglas = {
   },
 
   espacio(valor) {
-    if (!valor) return 'Seleccione un espacio libre.';
-    // RN-04: comprobar que el espacio siga libre (otra persona pudo ocuparlo)
-    if (CONFIG.USAR_API) return ''; // con API, el backend valida RN-04 (responde 409)
-    const esp = espaciosSimulados.find(e => e.id_espacio === Number(valor));
-    if (!esp || esp.estado !== 'LIBRE') return 'Este espacio ya tiene un contrato vigente.';
-    return '';
+    // RN-04: que el espacio siga libre lo comprueba el backend al guardar (responde 409)
+    return valor ? '' : 'Seleccione un espacio libre.';
   },
 
   // La tarifa debe ser mayor a 0
@@ -200,7 +164,7 @@ const reglas = {
 };
 
 /* ---------------------------------------------------------
-   6. MOSTRAR / LIMPIAR ERRORES
+   4. MOSTRAR / LIMPIAR ERRORES
    Bootstrap pinta en rojo el campo con la clase .is-invalid
    y muestra el <div class="invalid-feedback"> que está debajo.
    --------------------------------------------------------- */
@@ -254,23 +218,14 @@ function ocultarAlertaGeneral() {
 }
 
 /* ---------------------------------------------------------
-   7. SELECT DE ESPACIOS LIBRES (RN-04)
+   5. SELECT DE ESPACIOS LIBRES (RN-04)
    Solo se ofrecen espacios LIBRES del tipo elegido, así la
    caja no puede asignar un espacio que ya tiene contrato.
    --------------------------------------------------------- */
 
-// Hoy filtra el arreglo simulado. Con API sería:
-//   GET /api/espacios?tipo=TECHADO&estado=LIBRE
-async function obtenerEspaciosLibres(tipo) {
-  if (CONFIG.USAR_API) {
-    const respuesta = await fetch(
-      `${CONFIG.API_URL}/espacios?tipo=${encodeURIComponent(tipo)}&estado=LIBRE`,
-      { headers: obtenerCabeceras() }
-    );
-    if (!respuesta.ok) throw new Error('No se pudieron cargar los espacios.');
-    return respuesta.json();
-  }
-  return espaciosSimulados.filter(e => e.tipo === tipo && e.estado === 'LIBRE');
+// GET /api/espacios?tipo=TECHADO&estado=LIBRE
+function obtenerEspaciosLibres(tipo) {
+  return SIGEA.api('/espacios?tipo=' + encodeURIComponent(tipo) + '&estado=LIBRE');
 }
 
 async function cargarEspacios(tipo) {
@@ -307,7 +262,7 @@ async function cargarEspacios(tipo) {
 }
 
 /* ---------------------------------------------------------
-   8. ARMAR LOS DATOS Y ENVIARLOS
+   6. ARMAR LOS DATOS Y ENVIARLOS A LA API
    --------------------------------------------------------- */
 
 // Construye el objeto JSON que espera POST /api/abonados.
@@ -337,70 +292,40 @@ function obtenerDatosFormulario() {
   };
 }
 
-// Cabeceras con el token JWT guardado al iniciar sesión (RN-06)
-function obtenerCabeceras() {
-  const cabeceras = { 'Content-Type': 'application/json' };
-  const token = localStorage.getItem('token');
-  if (token) cabeceras.Authorization = `Bearer ${token}`;
-  return cabeceras;
-}
-
 /**
- * Envía el abonado a la API REST (lista para cuando Fernando la termine).
- * POST /api/abonados
+ * Envía el abonado a la API REST:  POST /api/abonados
+ * SIGEA.api agrega el token JWT (RN-06) y convierte el objeto a JSON.
+ * Si la API rechaza los datos, lanza un error con:
+ *   error.status   400 datos inválidos · 409 DNI, placa o espacio repetido (RN-04)
+ *   error.message  mensaje para la alerta roja
+ *   error.errores  mensajes por campo, por ejemplo { dni: 'Ya existe...' }
  */
-async function enviarAbonadoAPI(datos) {
-  const respuesta = await fetch(`${CONFIG.API_URL}/abonados`, {
-    method: 'POST',
-    headers: obtenerCabeceras(),
-    body: JSON.stringify(datos) // el objeto JS se convierte en texto JSON
-  });
-
-  // Se intenta leer la respuesta como JSON (puede venir vacía)
-  let cuerpo = {};
-  try { cuerpo = await respuesta.json(); } catch { /* sin cuerpo */ }
-
-  if (respuesta.ok) return cuerpo; // 201 Created
-
-  // Errores típicos de la API
-  if (respuesta.status === 401) {
-    throw new Error('Su sesión expiró. Vuelva a iniciar sesión.'); // RN-06: 8 horas
-  }
-  if (respuesta.status === 409) {
-    throw new Error(cuerpo.mensaje || 'El DNI o el espacio ya están registrados.'); // RN-04
-  }
-  throw new Error(cuerpo.mensaje || `Error del servidor (${respuesta.status}).`);
-}
-
-// Simula lo que hará el backend: guardar y ocupar el espacio
-function guardarSimulado(datos) {
-  return new Promise((resolve, reject) => {
-    setTimeout(() => { // espera 600 ms para parecer una petición real
-      const espacio = espaciosSimulados.find(e => e.id_espacio === datos.contrato.id_espacio);
-
-      // RN-04: un espacio solo puede tener un contrato vigente
-      if (!espacio || espacio.estado !== 'LIBRE') {
-        reject(new Error('El espacio seleccionado ya tiene un contrato vigente.'));
-        return;
-      }
-      // Evitar abonados duplicados por DNI
-      if (abonadosSimulados.some(a => a.abonado.dni === datos.abonado.dni)) {
-        reject(new Error('Ya existe un abonado registrado con ese DNI.'));
-        return;
-      }
-
-      espacio.estado = 'OCUPADO';
-      const registro = { id: abonadosSimulados.length + 1, ...datos, espacioCodigo: espacio.codigo };
-      abonadosSimulados.push(registro);
-      console.log('Abonado guardado (simulado):', registro);
-      resolve(registro);
-    }, 600);
-  });
-}
-
-// Decide si usa la API real o la simulación
 function guardarAbonado(datos) {
-  return CONFIG.USAR_API ? enviarAbonadoAPI(datos) : guardarSimulado(datos);
+  return SIGEA.api('/abonados', { metodo: 'POST', cuerpo: datos });
+}
+
+// La API nombra los campos como las columnas de la base de datos;
+// esta tabla dice a qué campo del formulario corresponde cada uno.
+const CAMPO_DE_LA_API = {
+  nombres: 'nombres',
+  apellidos: 'apellidos',
+  dni: 'dni',
+  direccion: 'direccion',
+  celular: 'celular',
+  tipo_vehiculo: 'tipoVehiculo',
+  placa_codigo: 'placa',
+  id_espacio: 'espacio',
+  tarifa_mensual: 'tarifa',
+  fecha_inicio: 'fechaInicio',
+  fecha_fin: 'fechaFin'
+};
+
+// Pinta en rojo, debajo de cada campo, los errores que devolvió la API
+function mostrarErroresDeLaApi(errores) {
+  Object.entries(errores).forEach(([campoApi, mensaje]) => {
+    const campo = CAMPO_DE_LA_API[campoApi];
+    if (campo) mostrarEstado(campo, mensaje);
+  });
 }
 
 // Bloquea el botón mientras se guarda (evita doble clic = doble registro)
@@ -412,9 +337,12 @@ function setCargando(cargando) {
 }
 
 /* ---------------------------------------------------------
-   9. CONFIRMACIÓN Y LIMPIEZA
+   7. CONFIRMACIÓN Y LIMPIEZA
    --------------------------------------------------------- */
-function mostrarConfirmacion(datos) {
+function mostrarConfirmacion(datos, abonadoCreado) {
+  // El botón "Registrar primer pago" lleva a la pantalla de pagos del abonado nuevo
+  document.getElementById('btnPrimerPago').href = SIGEA.paginas.pagos(abonadoCreado.id_abonado);
+
   const espacioTexto = selectEspacio.options[selectEspacio.selectedIndex]?.text || '';
   const filas = [
     ['Abonado', `${datos.abonado.nombres} ${datos.abonado.apellidos}`],
@@ -460,7 +388,7 @@ function ponerFechasPorDefecto() {
 }
 
 /* ---------------------------------------------------------
-   10. EVENTOS
+   8. EVENTOS
    --------------------------------------------------------- */
 
 // DNI y celular: borrar todo lo que no sea número mientras se escribe
@@ -520,11 +448,19 @@ form.addEventListener('submit', async e => {
   const datos = obtenerDatosFormulario();
   setCargando(true);
   try {
-    await guardarAbonado(datos);
-    mostrarConfirmacion(datos); // 3) Mensaje de confirmación
-    limpiarFormulario();        // 4) Formulario limpio
+    const abonadoCreado = await guardarAbonado(datos);
+    mostrarConfirmacion(datos, abonadoCreado); // 3) Mensaje de confirmación
+    limpiarFormulario();                       // 4) Formulario limpio
   } catch (error) {
+    // No se borra lo que el usuario escribió: solo se muestran los errores
     mostrarAlertaGeneral(error.message);
+    mostrarErroresDeLaApi(error.errores || {});
+    if (error.status === 409 && error.errores?.id_espacio) {
+      // Otra caja ocupó el espacio mientras se llenaba el formulario: se recarga la lista
+      const mensajeEspacio = error.errores.id_espacio;
+      await cargarEspacios(selectTipoEspacio.value);
+      mostrarEstado('espacio', mensajeEspacio);
+    }
   } finally {
     setCargando(false); // se ejecuta siempre, haya error o no
   }
@@ -534,4 +470,13 @@ form.addEventListener('submit', async e => {
 btnLimpiar.addEventListener('click', limpiarFormulario);
 
 // Al cargar la página
-ponerFechasPorDefecto();
+if (SIGEA.exigirSesion()) {
+  SIGEA.prepararBarra();
+  ponerFechasPorDefecto();
+
+  // RN-05: el rol OPERATIVO solo consulta; no puede registrar abonados
+  if (!SIGEA.sesion.puedeEscribir()) {
+    mostrarAlertaGeneral('Su rol solo permite consultar. Para registrar abonados ingrese con un usuario de Caja o Gerencia.');
+    form.querySelectorAll('input, select, button').forEach(control => { control.disabled = true; });
+  }
+}
