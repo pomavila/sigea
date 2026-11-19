@@ -125,10 +125,30 @@
                   </select>
                 </div>
 
-                <!-- Solo para pagos que no son en efectivo -->
+                <!-- Sprint 2 · HU-04 · T18: QR del negocio para Yape / Plin -->
+                <div class="col-12 d-none" id="grupoQr">
+                  <div class="border rounded-3 p-3 d-flex flex-column flex-sm-row align-items-center gap-3 bg-light">
+                    <img id="imgQr" class="sigea-qr border" alt="Código QR del negocio para pagar con Yape o Plin">
+                    <div class="small">
+                      <div class="fw-semibold mb-1" id="tituloQr">Pagar con Yape</div>
+                      <ol class="ps-3 mb-2">
+                        <li>El abonado escanea el QR con su aplicación.</li>
+                        <li>Paga el monto exacto: <strong id="montoQr"></strong>.</li>
+                        <li>Le muestra la constancia y usted anota el n.° de operación.</li>
+                      </ol>
+                      <span class="badge text-bg-warning text-wrap text-start lh-sm d-none" id="avisoQrPrueba">
+                        <i class="bi bi-exclamation-triangle-fill me-1" aria-hidden="true"></i>QR de prueba: falta el QR real del negocio
+                      </span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Solo para pagos que no son en efectivo (RN-08: obligatorio y único) -->
                 <div class="col-12 d-none" id="grupoOperacion">
-                  <label for="nroOperacion" class="form-label">N.° de operación (opcional)</label>
-                  <input type="text" class="form-control" id="nroOperacion" maxlength="30" autocomplete="off">
+                  <label for="nroOperacion" class="form-label">N.° de operación <span class="text-danger">*</span></label>
+                  <input type="text" class="form-control" id="nroOperacion" maxlength="30" autocomplete="off"
+                         aria-describedby="ayudaOperacion">
+                  <div class="form-text" id="ayudaOperacion">Obligatorio en Yape, Plin y transferencia. No se puede repetir.</div>
                   <div class="invalid-feedback" id="error-nroOperacion"></div>
                 </div>
 

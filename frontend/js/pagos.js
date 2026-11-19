@@ -211,6 +211,7 @@ function actualizarMonto() {
   const periodo = calcularPeriodo(contrato, meses);
 
   inputMonto.value = montoDelPago().toFixed(2);
+  document.getElementById('montoQr').textContent = SIGEA.moneda(montoDelPago());
   document.getElementById('ayudaMonto').textContent =
     `${meses} × ${SIGEA.moneda(contrato.tarifa_mensual)} (tarifa mensual)`;
   cajaPeriodo.replaceChildren(
@@ -228,12 +229,28 @@ function limpiarErrorOperacion() {
 }
 
 function actualizarMedio() {
-  const esEfectivo = selectMedio.value === 'EFECTIVO';
+  const medio = selectMedio.value;
+  const esEfectivo = medio === 'EFECTIVO';
   document.getElementById('grupoOperacion').classList.toggle('d-none', esEfectivo);
   if (esEfectivo) {
     inputOperacion.value = '';
     limpiarErrorOperacion();
   }
+
+  // Sprint 2 · HU-04 · T18: con Yape o Plin se muestra el QR del negocio
+  const rutaQr = SIGEA_CONFIG.QR_PAGO?.[medio];
+  document.getElementById('grupoQr').classList.toggle('d-none', !rutaQr);
+  if (rutaQr) {
+    document.getElementById('imgQr').src = new URL(rutaQr, SIGEA.paginas.panel).href;
+    document.getElementById('tituloQr').textContent = `Pagar con ${SIGEA.MEDIOS_PAGO[medio]}`;
+    document.getElementById('montoQr').textContent = SIGEA.moneda(montoDelPago());
+    document.getElementById('avisoQrPrueba').classList.toggle('d-none', !SIGEA_CONFIG.QR_ES_PRUEBA);
+  }
+}
+
+function errorOperacion(mensaje) {
+  inputOperacion.classList.add('is-invalid');
+  document.getElementById('error-nroOperacion').textContent = mensaje;
 }
 
 function filaResumen(etiqueta, valor) {
@@ -253,6 +270,13 @@ formPago.addEventListener('submit', e => {
   const meses = Number(selectMeses.value);
   const periodo = calcularPeriodo(contrato, meses);
   const operacion = inputOperacion.value.trim();
+
+  // RN-08: en pagos digitales el n.º de operación es obligatorio
+  if (selectMedio.value !== 'EFECTIVO' && !operacion) {
+    errorOperacion('Ingrese el n.° de operación del pago con Yape, Plin o transferencia.');
+    inputOperacion.focus();
+    return;
+  }
 
   document.getElementById('resumenPago').replaceChildren(
     filaResumen('Abonado', `${abonado.nombres} ${abonado.apellidos}`),
@@ -294,10 +318,7 @@ btnConfirmarPago.addEventListener('click', async () => {
   } catch (error) {
     modal.hide();
     SIGEA.mostrarAlerta(alerta, error.message);
-    if (error.errores?.nro_operacion) {
-      inputOperacion.classList.add('is-invalid');
-      document.getElementById('error-nroOperacion').textContent = error.errores.nro_operacion;
-    }
+    if (error.errores?.nro_operacion) errorOperacion(error.errores.nro_operacion);
     alerta.scrollIntoView({ behavior: 'smooth', block: 'center' });
   } finally {
     btnConfirmarPago.disabled = false;
