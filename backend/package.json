@@ -7,7 +7,8 @@
     "dev": "node --watch app.js",
     "test": "node --test",
     "db:reset": "node scripts/db-reset.js",
-    "usuario:crear": "node scripts/crear-usuario.js"
+    "usuario:crear": "node scripts/crear-usuario.js",
+    "db:nube": "node --env-file=.env.nube scripts/db-reset.js"
   },
   "keywords": [],
   "author": "",

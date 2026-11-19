@@ -14,6 +14,12 @@ const PORT = process.env.PORT || 3000;
 
 app.disable("x-powered-by"); // no anunciar qué tecnología usa el servidor
 
+// En la nube (Render) el servidor está detrás de un proxy. TRUST_PROXY=1 hace que
+// req.ip sea la IP real del usuario: así el límite de intentos de login es por persona.
+if (process.env.TRUST_PROXY) {
+  app.set("trust proxy", Number(process.env.TRUST_PROXY) || 1);
+}
+
 // CORS: permite que el frontend llame a la API desde otro origen
 // (por ejemplo, al abrir los archivos .html directamente o con Live Server).
 // Para restringirlo, definir CORS_ORIGIN en .env con los orígenes separados por coma.

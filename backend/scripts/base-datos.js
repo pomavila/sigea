@@ -10,6 +10,7 @@ const fs = require('fs');
 const path = require('path');
 const mysql = require('mysql2/promise');
 require('dotenv').config({ path: path.join(__dirname, '..', '.env'), quiet: true });
+const { opcionesSsl } = require('../src/config/db');
 
 const CARPETA_SQL = path.join(__dirname, '..', '..', 'database');
 
@@ -28,7 +29,8 @@ async function recrearBase(nombreBase) {
     port: Number(process.env.DB_PORT || 3306),
     user: process.env.DB_USER,
     password: process.env.DB_PASSWORD,
-    multipleStatements: true // permite ejecutar un archivo .sql completo
+    multipleStatements: true, // permite ejecutar un archivo .sql completo
+    ssl: opcionesSsl()        // solo si DB_SSL=true (base en la nube)
   });
 
   try {

@@ -1,0 +1,40 @@
+# =====================================================================
+# SIGEA · Publicación en Render (Sprint 2 · T24)
+# Render lee este archivo (Blueprint) y crea el servicio web.
+# La base MySQL va aparte (por ejemplo Aiven, plan gratuito): ver docs/DESPLIEGUE.md
+# =====================================================================
+services:
+  - type: web
+    name: sigea
+    runtime: node
+    plan: free
+    rootDir: backend
+    buildCommand: npm ci
+    startCommand: npm start
+    healthCheckPath: /api/salud
+    envVars:
+      - key: NODE_VERSION
+        value: "22"
+      - key: TRUST_PROXY
+        value: "1"
+      - key: ZONA_HORARIA
+        value: America/Lima
+      - key: JWT_EXPIRES_IN
+        value: 8h
+      - key: JWT_SECRET
+        generateValue: true      # Render crea una clave aleatoria
+      # Datos de la base MySQL en la nube: se escriben en el panel de Render
+      - key: DB_HOST
+        sync: false
+      - key: DB_PORT
+        sync: false
+      - key: DB_USER
+        sync: false
+      - key: DB_PASSWORD
+        sync: false
+      - key: DB_NAME
+        value: sigea_db
+      - key: DB_SSL
+        value: "true"
+      - key: DB_SSL_CA
+        sync: false
