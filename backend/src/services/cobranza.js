@@ -85,4 +85,4 @@ async function resumenGeneral() {
   };
 }
 
-module.exports = { listarAbonados, detalleAbonado, resumenGeneral };
+module.exports = { listarAbonados, detalleAbonado, resumenGeneral, aResumen };

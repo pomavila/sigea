@@ -18,6 +18,9 @@
    PUT     /abonados/:id               CAJA, GERENCIA
    POST    /pagos                      CAJA, GERENCIA   (RN-05)
    POST    /pagos/:id/anular           GERENCIA         (RN-05)
+   GET     /salida/verificar?placa=    cualquier usuario con sesión (Sprint 2 · HU-03)
+   POST    /salida                     cualquier usuario con sesión (registra la alerta)
+   GET     /alertas?fecha=             cualquier usuario con sesión
    ========================================================= */
 
 'use strict';
@@ -28,6 +31,7 @@ const { ROLES } = require('../config/seguridad');
 const authRoutes = require('./auth.routes');
 const abonadoController = require('../controllers/abonado.controller');
 const pagoController = require('../controllers/pago.controller');
+const salidaController = require('../controllers/salida.controller');
 
 const router = Router();
 
@@ -58,5 +62,10 @@ router.get('/abonados/:id/pagos', pagoController.historial);
 router.get('/abonados/:id/saldo', pagoController.saldo);
 router.post('/pagos', puedeEscribir, pagoController.registrar);
 router.post('/pagos/:id/anular', permitirRoles(ROLES.GERENCIA), pagoController.anular);
+
+// HU-03 · Alerta de salida (RN-07). La caja y el área operativa controlan la salida.
+router.get('/salida/verificar', salidaController.verificar);
+router.post('/salida', salidaController.registrar);
+router.get('/alertas', salidaController.alertas);
 
 module.exports = router;
