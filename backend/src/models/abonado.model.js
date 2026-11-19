@@ -65,6 +65,18 @@ async function contratosDeAbonado(idAbonado) {
   return filas;
 }
 
+// HU-03 · T13: contratos vigentes del vehículo con esa placa.
+// Se compara sin guiones ni espacios: "4521MT", "4521-mt" y "4521 MT" son la misma placa.
+async function contratosPorPlaca(placaNormalizada) {
+  const [filas] = await pool.execute(
+    `${SELECT_CONTRATOS}
+      WHERE REPLACE(REPLACE(UPPER(v.placa_codigo), '-', ''), ' ', '') = ?
+      ORDER BY c.id_contrato`,
+    [placaNormalizada]
+  );
+  return filas;
+}
+
 async function buscarPorId(idAbonado) {
   const [filas] = await pool.execute(
     `SELECT id_abonado, nombres, apellidos, dni, direccion, celular, fecha_registro
@@ -176,6 +188,7 @@ async function actualizar(idAbonado, datos) {
 module.exports = {
   listarContratos,
   contratosDeAbonado,
+  contratosPorPlaca,
   buscarPorId,
   crearConContrato,
   actualizar
