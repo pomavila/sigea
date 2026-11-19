@@ -378,6 +378,17 @@ describe('HU-02 · Pagos y saldo', () => {
     assert.equal(saldo.datos.saldo_pendiente, 0);
   });
 
+  test('RN-08 · un pago con Yape, Plin o transferencia exige n.º de operación', async () => {
+    for (const medio of ['YAPE', 'PLIN', 'TRANSFERENCIA']) {
+      const r = await api('POST', '/api/pagos', {
+        token: tokens.caja,
+        cuerpo: { id_contrato: 5, meses: 1, monto: 200, medio_pago: medio, nro_operacion: '  ' }
+      });
+      assert.equal(r.status, 400, medio);
+      assert.ok(r.datos.errores.nro_operacion, medio);
+    }
+  });
+
   test('no acepta el mismo número de operación en otro pago', async () => {
     const r = await api('POST', '/api/pagos', {
       token: tokens.caja,

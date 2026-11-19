@@ -402,6 +402,7 @@ Funcionalidades implementadas:
 | RN-05 | CAJA y GERENCIA registran pagos; solo GERENCIA anula. |
 | RN-06 | Contraseñas cifradas con bcrypt; la sesión expira a las 8 horas. |
 | RN-07 | Sprint 2: al consultar una placa en la salida, si el abonado tiene saldo pendiente o está vencido, aparece una alerta roja con el monto y la consulta queda registrada. |
+| RN-08 | Sprint 2: en pagos con Yape, Plin o transferencia el n.º de operación es obligatorio y no se puede repetir. |
 
 **Sprint 2 · HU-03: Alerta de salida**
 

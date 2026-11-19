@@ -45,10 +45,16 @@ function validarPago(cuerpo) {
     errores.medio_pago = 'Seleccione el medio de pago.';
   }
 
-  // En efectivo no existe número de operación
+  // RN-08 (Sprint 2 · HU-04 · T17): en Yape, Plin o transferencia el n.º de
+  // operación es OBLIGATORIO y único (la unicidad la asegura la base de datos).
+  // En efectivo no existe número de operación.
   if (limpio.medio_pago === 'EFECTIVO') {
     limpio.nro_operacion = null;
-  } else if (limpio.nro_operacion && !REGEX_OPERACION.test(limpio.nro_operacion)) {
+  } else if (!limpio.nro_operacion) {
+    if (!errores.medio_pago) {
+      errores.nro_operacion = 'Ingrese el n.º de operación del pago con Yape, Plin o transferencia.';
+    }
+  } else if (!REGEX_OPERACION.test(limpio.nro_operacion)) {
     errores.nro_operacion = 'El número de operación admite letras, números y guion (4 a 30 caracteres).';
   }
 
