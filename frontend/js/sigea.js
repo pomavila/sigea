@@ -31,6 +31,7 @@ const SIGEA = (() => {
     panel: `${RAIZ}index.html`,
     abonados: `${RAIZ}pages/abonados.html`,
     registro: `${RAIZ}pages/registro-abonado.html`,
+    salida: `${RAIZ}pages/salida.html`,
     pagos: idAbonado => `${RAIZ}pages/pagos.html?id=${encodeURIComponent(idAbonado)}`
   };
 
