@@ -1,4 +1,4 @@
-# API REST de SIGEA · Sprint 1
+# API REST de SIGEA · Sprints 1 y 2
 
 Todas las rutas empiezan con `/api`. En desarrollo: `http://localhost:3000/api`.
 
@@ -51,6 +51,9 @@ El token se obtiene en el inicio de sesión y dura 8 horas (RN-06).
 | GET | `/abonados/:id/pagos` | con sesión | Estado de cuenta e historial de pagos |
 | POST | `/pagos` | CAJA, GERENCIA | Registra un pago |
 | POST | `/pagos/:id/anular` | GERENCIA | Anula un pago |
+| GET | `/salida/verificar?placa=` | con sesión | Sprint 2 · HU-03: consulta la deuda de una placa sin registrar nada |
+| POST | `/salida` | con sesión | Sprint 2 · HU-03: consulta la placa y registra la alerta (RN-07) |
+| GET | `/alertas?fecha=` | con sesión | Sprint 2 · HU-03: historial de alertas del día con totales |
 
 ## Ejemplos
 
@@ -145,3 +148,32 @@ Cada elemento es un contrato vigente:
 - Solo GERENCIA (RN-05). Un usuario CAJA recibe 403.
 - El pago no se borra: queda con estado `ANULADO`, quién lo anuló, cuándo y el motivo.
 - Solo se puede anular el último pago del contrato.
+
+### GET /salida/verificar?placa=CRT-001 (Sprint 2 · HU-03)
+
+`resultado` puede ser `CON_DEUDA` (alerta roja), `AL_DIA` (salida permitida) o `NO_ABONADO` (cliente por hora).
+La placa se reconoce con o sin guion y en minúsculas.
+
+```json
+{
+  "placa": "CRT-001",
+  "resultado": "CON_DEUDA",
+  "mensaje": "Abonado con deuda: cobrar antes de permitir la salida.",
+  "abonado": { "id_abonado": 4, "nombres": "Marleny", "apellidos": "Paucar Salazar", "dni": "70456789", "celular": "999888777" },
+  "vehiculo": { "id_vehiculo": 4, "tipo": "CARRETA", "placa_codigo": "CRT-001", "descripcion": "Carreta de carga liviana" },
+  "espacio": { "id_espacio": 7, "codigo": "E-03", "tipo": "EXTERIOR" },
+  "id_contrato": 4,
+  "estado": "VENCIDO",
+  "meses_adeudados": 1,
+  "saldo_pendiente": 250
+}
+```
+
+### POST /salida (Sprint 2 · HU-03)
+
+```json
+{ "placa": "CRT-001" }
+```
+
+Responde `201` con lo mismo que `/salida/verificar` más `id_alerta` y `fecha_hora` (hora de Huancayo).
+
