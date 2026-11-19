@@ -97,6 +97,19 @@ información de los abonados del estacionamiento.
 Permitir el registro de pagos y la consulta
 de los saldos pendientes de los abonados.
 
+### Sprint 2 (en curso)
+
+**Periodo:** 16/11/2026 al 22/11/2026
+
+**Objetivo del Sprint:** que ningún abonado con deuda salga sin ser detectado
+y que pueda pagar sin efectivo y recibir su comprobante.
+
+- **HU-03: Alerta de salida** (terminada): pantalla *Control de salida*.
+- **HU-04: Pago digital** (en proceso).
+- **HU-05: Comprobante digital** (por iniciar).
+
+Publicación en la nube: ver `docs/DESPLIEGUE.md`.
+
 ## 7. Estructura del proyecto
 
 ```text
@@ -388,5 +401,14 @@ Funcionalidades implementadas:
 | RN-04 | Un espacio solo puede tener un contrato vigente. |
 | RN-05 | CAJA y GERENCIA registran pagos; solo GERENCIA anula. |
 | RN-06 | Contraseñas cifradas con bcrypt; la sesión expira a las 8 horas. |
+| RN-07 | Sprint 2: al consultar una placa en la salida, si el abonado tiene saldo pendiente o está vencido, aparece una alerta roja con el monto y la consulta queda registrada. |
+
+**Sprint 2 · HU-03: Alerta de salida**
+
+- Pantalla *Control de salida*: se escribe la placa y se presiona Enter.
+- Alerta roja con el monto adeudado y botón *Registrar pago*; verde si está al día; *cliente por hora* si no es abonado.
+- Cada consulta queda en la tabla `alerta_salida` con fecha, hora y usuario, y se ve en el historial del día.
+- Si ya tienes la base del Sprint 1 con datos, ejecuta una vez `database/migrations/002_alerta_salida.sql`.
 
 La descripción de cada ruta de la API está en `docs/API.md`.
+La colección de Postman del Sprint 2 está en `docs/SIGEA-Sprint2.postman_collection.json`.

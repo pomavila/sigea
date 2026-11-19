@@ -155,3 +155,28 @@ CREATE TABLE pago (
 CREATE INDEX idx_pago_contrato_periodo ON pago (id_contrato, periodo_hasta);
 -- Reportes de caja por fecha
 CREATE INDEX idx_pago_fecha ON pago (fecha_pago);
+
+-- ---------------------------------------------------------------------
+-- 7. ALERTA_SALIDA  (Sprint 2 · HU-03 · T13 · RN-07)
+--    Cada vez que la caja o el área operativa consulta una placa en la
+--    salida, queda una fila con el resultado: así se sabe quién revisó,
+--    cuándo y si el abonado tenía deuda.
+-- ---------------------------------------------------------------------
+CREATE TABLE alerta_salida (
+    id_alerta        INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    placa            VARCHAR(15)   NOT NULL,          -- tal como se consultó (en mayúsculas)
+    id_contrato      INT UNSIGNED  NULL,              -- NULL si la placa no es de un abonado
+    saldo_detectado  DECIMAL(8,2)  NOT NULL DEFAULT 0,
+    resultado        ENUM('CON_DEUDA','AL_DIA','NO_ABONADO') NOT NULL,
+    fecha_hora       DATETIME      NOT NULL,          -- hora de Huancayo (la envía la API)
+    id_usuario       INT UNSIGNED  NOT NULL,          -- quién consultó la placa
+    CONSTRAINT pk_alerta_salida PRIMARY KEY (id_alerta),
+    CONSTRAINT ck_alerta_saldo  CHECK (saldo_detectado >= 0),
+    CONSTRAINT fk_alerta_contrato FOREIGN KEY (id_contrato) REFERENCES contrato (id_contrato)
+        ON DELETE RESTRICT ON UPDATE RESTRICT,
+    CONSTRAINT fk_alerta_usuario  FOREIGN KEY (id_usuario)  REFERENCES usuario  (id_usuario)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB;
+
+-- Historial de alertas del día (pantalla Control de salida)
+CREATE INDEX idx_alerta_fecha ON alerta_salida (fecha_hora);

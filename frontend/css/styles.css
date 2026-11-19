@@ -186,6 +186,41 @@ body {
   color: #fff;
 }
 
+/* 11. Control de salida (Sprint 2 · HU-03) */
+.sigea-placa {
+  letter-spacing: 0.08em;
+}
+
+.sigea-resultado.es-deuda {
+  background-color: #b4161b;
+  color: #fff;
+  animation: sigea-pulso 1.2s ease-in-out 2;
+}
+
+.sigea-resultado.es-ok {
+  background-color: #157347;
+  color: #fff;
+}
+
+.sigea-resultado.es-hora {
+  background-color: #eef1f5;
+}
+
+.sigea-monto-deuda {
+  background-color: rgba(255, 255, 255, 0.14);
+  border-radius: 0.5rem;
+  padding: 0.75rem 1rem;
+}
+
+@keyframes sigea-pulso {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(180, 22, 27, 0.6); }
+  50%      { box-shadow: 0 0 0 0.6rem rgba(180, 22, 27, 0); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sigea-resultado.es-deuda { animation: none; }
+}
+
 /* 10. Celulares (menos de 576 px) */
 @media (max-width: 575.98px) {
   /* Evita que iOS haga zoom al tocar un campo (lo hace si la letra es < 16 px) */

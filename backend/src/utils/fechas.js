@@ -42,6 +42,19 @@ function hoy() {
   }).format(new Date());
 }
 
+// Fecha y hora actual en la zona del negocio, como "AAAA-MM-DD HH:MM:SS" (tipo DATETIME).
+// La envía la API para que no dependa de la zona horaria del servidor MySQL
+// (en la nube suele estar en UTC, 5 horas adelante de Huancayo).
+function ahora() {
+  const partes = Object.fromEntries(new Intl.DateTimeFormat('en-CA', {
+    timeZone: ZONA_HORARIA,
+    year: 'numeric', month: '2-digit', day: '2-digit',
+    hour: '2-digit', minute: '2-digit', second: '2-digit',
+    hourCycle: 'h23'
+  }).formatToParts(new Date()).map(p => [p.type, p.value]));
+  return `${partes.year}-${partes.month}-${partes.day} ${partes.hour}:${partes.minute}:${partes.second}`;
+}
+
 function sumarDias(texto, dias) {
   return aTexto(new Date(aFecha(texto).getTime() + dias * MS_POR_DIA));
 }
@@ -76,6 +89,7 @@ function mesesCompletosEntre(desde, hasta) {
 module.exports = {
   esFechaValida,
   hoy,
+  ahora,
   sumarDias,
   sumarMeses,
   diasEntre,

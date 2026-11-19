@@ -1,0 +1,188 @@
+{
+  "info": {
+    "name": "SIGEA · Sprint 2 (HU-03 Alerta de salida)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Importar en Postman. 1) Ejecutar 'Iniciar sesión' (guarda el token). 2) Probar las rutas de salida. Para la nube, cambiar la variable baseUrl."
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:3000/api"
+    },
+    {
+      "key": "token",
+      "value": ""
+    },
+    {
+      "key": "contrasena",
+      "value": "(ver database/seed.sql)"
+    }
+  ],
+  "item": [
+    {
+      "name": "Iniciar sesión (caja01)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/auth/login",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"usuario\": \"caja01\",\n  \"contrasena\": \"{{contrasena}}\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const datos = pm.response.json();",
+              "pm.test('login correcto', () => pm.response.to.have.status(200));",
+              "if (datos.token) pm.collectionVariables.set('token', datos.token);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verificar placa con deuda (CRT-001)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/salida/verificar?placa=CRT-001",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('responde 200', () => pm.response.to.have.status(200));",
+              "pm.test('alerta CON_DEUDA', () => pm.expect(pm.response.json().resultado).to.eql('CON_DEUDA'));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Verificar placa al día (V4K-812)",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/salida/verificar?placa=V4K-812",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Verificar placa que no es de abonado",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/salida/verificar?placa=ABC-123",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    },
+    {
+      "name": "Registrar salida (POST /salida)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": "{{baseUrl}}/salida",
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"placa\": \"CRT-001\"\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('responde 201', () => pm.response.to.have.status(201));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "Historial de alertas del día",
+      "request": {
+        "method": "GET",
+        "header": [],
+        "url": "{{baseUrl}}/alertas",
+        "auth": {
+          "type": "bearer",
+          "bearer": [
+            {
+              "key": "token",
+              "value": "{{token}}",
+              "type": "string"
+            }
+          ]
+        }
+      }
+    }
+  ]
+}

@@ -469,6 +469,75 @@ describe('HU-02 · Pagos y saldo', () => {
   });
 });
 
+describe('HU-03 · Alerta de salida (Sprint 2 · RN-07)', () => {
+  // Carlos (placa 4521-MT) tiene su periodo pagado vencido: debe dinero
+  test('CP-11 · placa de un abonado con deuda → alerta CON_DEUDA con el monto', async () => {
+    const saldo = await api('GET', '/api/abonados/3/saldo', { token: tokens.caja });
+    assert.ok(saldo.datos.saldo_pendiente > 0);
+
+    const r = await api('POST', '/api/salida', { token: tokens.caja, cuerpo: { placa: '4521-mt' } });
+    assert.equal(r.status, 201);
+    assert.equal(r.datos.resultado, 'CON_DEUDA');
+    assert.equal(r.datos.placa, '4521-MT');
+    assert.equal(r.datos.abonado.id_abonado, 3);
+    assert.equal(r.datos.saldo_pendiente, saldo.datos.saldo_pendiente);
+    assert.ok(r.datos.meses_adeudados >= 1);
+  });
+
+  // Rosa (placa V4K-812) tiene pagado hasta dentro de 20 días
+  test('CP-12 · placa de un abonado al día → salida permitida (AL_DIA)', async () => {
+    const r = await api('POST', '/api/salida', { token: tokens.operativo, cuerpo: { placa: 'v4k 812' } });
+    assert.equal(r.status, 201);
+    assert.equal(r.datos.resultado, 'AL_DIA');
+    assert.equal(r.datos.saldo_pendiente, 0);
+  });
+
+  test('CP-13 · placa que no es de un abonado → cliente por hora (NO_ABONADO)', async () => {
+    const r = await api('POST', '/api/salida', { token: tokens.caja, cuerpo: { placa: 'ZZZ-999' } });
+    assert.equal(r.status, 201);
+    assert.equal(r.datos.resultado, 'NO_ABONADO');
+    assert.equal(r.datos.abonado, undefined);
+  });
+
+  test('GET /api/salida/verificar consulta sin registrar la alerta', async () => {
+    const antes = await api('GET', '/api/alertas', { token: tokens.caja });
+    const r = await api('GET', '/api/salida/verificar?placa=4521-MT', { token: tokens.caja });
+    assert.equal(r.status, 200);
+    assert.equal(r.datos.resultado, 'CON_DEUDA');
+    const despues = await api('GET', '/api/alertas', { token: tokens.caja });
+    assert.equal(despues.datos.total, antes.datos.total);
+  });
+
+  test('CP-14 · cada consulta queda en el historial con fecha, hora y usuario', async () => {
+    const r = await api('GET', `/api/alertas?fecha=${hoy()}`, { token: tokens.gerencia });
+    assert.equal(r.status, 200);
+    assert.equal(r.datos.total, 3);
+    assert.equal(r.datos.con_deuda, 1);
+    assert.equal(r.datos.al_dia, 1);
+    assert.equal(r.datos.no_abonado, 1);
+    const [ultima] = r.datos.alertas;                      // la más reciente primero
+    assert.equal(ultima.placa, 'ZZZ-999');
+    assert.equal(ultima.registrado_por, 'Cajero de Turno');
+    assert.ok(ultima.fecha_hora.startsWith(`${hoy()} `));
+    assert.match(ultima.fecha_hora, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+    const deuda = r.datos.alertas.find(a => a.resultado === 'CON_DEUDA');
+    assert.equal(deuda.abonado, 'Carlos Ccora Landa');
+    assert.ok(deuda.saldo_detectado > 0);
+  });
+
+  test('valida la placa y la fecha, y exige sesión', async () => {
+    const sinPlaca = await api('POST', '/api/salida', { token: tokens.caja, cuerpo: { placa: '  ' } });
+    assert.equal(sinPlaca.status, 400);
+    assert.ok(sinPlaca.datos.errores.placa);
+    const rara = await api('GET', '/api/salida/verificar?placa=%3Cscript%3E', { token: tokens.caja });
+    assert.equal(rara.status, 400);
+    const fecha = await api('GET', '/api/alertas?fecha=2026-02-30', { token: tokens.caja });
+    assert.equal(fecha.status, 400);
+    const sinToken = await api('POST', '/api/salida', { cuerpo: { placa: '4521-MT' } });
+    assert.equal(sinToken.status, 401);
+  });
+});
+
 describe('Errores generales', () => {
   test('un JSON mal escrito responde 400, no 500', async () => {
     const respuesta = await fetch(urlBase + '/api/auth/login', {

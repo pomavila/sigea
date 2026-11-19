@@ -2,6 +2,18 @@
 const mysql = require("mysql2/promise");
 require("dotenv").config({ quiet: true });
 
+/**
+ * SSL para bases MySQL en la nube (Aiven, TiDB Cloud, Azure...).
+ * En la computadora local no se usa. Se activa con DB_SSL=true.
+ * Si el proveedor entrega un certificado (ca.pem), su contenido va en DB_SSL_CA
+ * (se aceptan saltos de línea escritos como \n).
+ */
+function opcionesSsl() {
+  if (String(process.env.DB_SSL).toLowerCase() !== 'true') return undefined;
+  const ca = process.env.DB_SSL_CA ? process.env.DB_SSL_CA.replace(/\\n/g, '\n') : undefined;
+  return { rejectUnauthorized: true, minVersion: 'TLSv1.2', ...(ca ? { ca } : {}) };
+}
+
 const pool = mysql.createPool({
   host: process.env.DB_HOST,
   port: Number(process.env.DB_PORT || 3306),
@@ -12,7 +24,8 @@ const pool = mysql.createPool({
   connectionLimit: 10,
   // Las columnas DATE y DATETIME llegan como texto ("2026-11-09").
   // Así no cambian de día por culpa de la zona horaria.
-  dateStrings: true
+  dateStrings: true,
+  ssl: opcionesSsl()
 });
 
 async function probarConexion() {
@@ -49,4 +62,4 @@ async function enTransaccion(trabajo) {
   }
 }
 
-module.exports = { pool, probarConexion, enTransaccion };
+module.exports = { pool, probarConexion, enTransaccion, opcionesSsl };
