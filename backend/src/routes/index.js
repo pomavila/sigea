@@ -22,6 +22,8 @@
    POST    /salida                     cualquier usuario con sesión (registra la alerta)
    GET     /alertas?fecha=             cualquier usuario con sesión
    GET     /caja/cuadre?fecha=         CAJA, GERENCIA   (Sprint 2 · HU-04)
+   GET     /pagos/:id/comprobante      cualquier usuario con sesión (Sprint 2 · HU-05, PDF)
+   GET     /pagos/:id/whatsapp         cualquier usuario con sesión (enlace wa.me)
    ========================================================= */
 
 'use strict';
@@ -64,6 +66,10 @@ router.get('/abonados/:id/pagos', pagoController.historial);
 router.get('/abonados/:id/saldo', pagoController.saldo);
 router.post('/pagos', puedeEscribir, pagoController.registrar);
 router.post('/pagos/:id/anular', permitirRoles(ROLES.GERENCIA), pagoController.anular);
+
+// HU-05 · Comprobante digital (RN-09)
+router.get('/pagos/:id/comprobante', pagoController.comprobantePdf);
+router.get('/pagos/:id/whatsapp', pagoController.whatsapp);
 
 // HU-03 · Alerta de salida (RN-07). La caja y el área operativa controlan la salida.
 router.get('/salida/verificar', salidaController.verificar);
