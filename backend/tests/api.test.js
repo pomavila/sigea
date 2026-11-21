@@ -588,6 +588,73 @@ describe('HU-04 · Cuadre del día (Sprint 2 · T19)', () => {
   });
 });
 
+describe('HU-05 · Comprobante digital (Sprint 2 · RN-09)', () => {
+  const pagar = cuerpo => api('POST', '/api/pagos', { token: tokens.caja, cuerpo });
+  let pagoRosa;
+
+  test('RN-09 · cada pago genera un comprobante con número correlativo', async () => {
+    const r1 = await pagar({ id_contrato: 5, meses: 1, monto: 200, medio_pago: 'EFECTIVO' });
+    const r2 = await pagar({ id_contrato: 1, meses: 1, monto: 200, medio_pago: 'YAPE', nro_operacion: 'YP-HU05-0001' });
+    assert.equal(r1.status, 201); assert.equal(r2.status, 201);
+    const c1 = r1.datos.pago.comprobante, c2 = r2.datos.pago.comprobante;
+    assert.match(c1.codigo, /^C001-\d{6}$/);
+    assert.equal(c2.numero, c1.numero + 1);
+    pagoRosa = r2.datos.pago;
+
+    const historial = await api('GET', '/api/abonados/1/pagos', { token: tokens.caja });
+    assert.equal(historial.datos.pagos.find(p => p.id_pago === pagoRosa.id_pago).comprobante, c2.codigo);
+  });
+
+  test('CP-18 · el comprobante se descarga en PDF', async () => {
+    const respuesta = await fetch(`${urlBase}/api/pagos/${pagoRosa.id_pago}/comprobante`, {
+      headers: { Authorization: `Bearer ${tokens.caja}` }
+    });
+    assert.equal(respuesta.status, 200);
+    assert.equal(respuesta.headers.get('content-type'), 'application/pdf');
+    assert.match(respuesta.headers.get('content-disposition'), new RegExp(pagoRosa.comprobante.codigo));
+    const bytes = Buffer.from(await respuesta.arrayBuffer());
+    assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
+    assert.ok(bytes.length > 1000);
+  });
+
+  test('CP-19 · arma el enlace de WhatsApp con el celular y los datos del pago', async () => {
+    const r = await api('GET', `/api/pagos/${pagoRosa.id_pago}/whatsapp`, { token: tokens.caja });
+    assert.equal(r.status, 200);
+    assert.ok(r.datos.url.startsWith('https://wa.me/51987654321?text='));
+    const texto = decodeURIComponent(r.datos.url.split('?text=')[1]);
+    assert.match(texto, new RegExp(pagoRosa.comprobante.codigo));
+    assert.match(texto, /S\/ 200\.00/);
+    assert.match(texto, /Op\. YP-HU05-0001/);
+  });
+
+  test('sin celular registrado no se puede enviar por WhatsApp (409)', async () => {
+    // Una prueba anterior le puso celular al abonado 5: aquí se le quita
+    await pool.execute('UPDATE abonado SET celular = NULL WHERE id_abonado = 5');
+    const historial = await api('GET', '/api/abonados/5/pagos', { token: tokens.caja });
+    const idPago = historial.datos.pagos[0].id_pago;
+    const r = await api('GET', `/api/pagos/${idPago}/whatsapp`, { token: tokens.caja });
+    assert.equal(r.status, 409);
+    assert.match(r.datos.mensaje, /celular/);
+  });
+
+  test('RN-09 · si el pago se anula, el comprobante queda anulado', async () => {
+    const anular = await api('POST', `/api/pagos/${pagoRosa.id_pago}/anular`, {
+      token: tokens.gerencia, cuerpo: { motivo: 'Prueba de anulación del comprobante' }
+    });
+    assert.equal(anular.status, 200);
+    const r = await api('GET', `/api/pagos/${pagoRosa.id_pago}/whatsapp`, { token: tokens.caja });
+    assert.match(decodeURIComponent(r.datos.url), /ANULADO/);
+    const pdf = await fetch(`${urlBase}/api/pagos/${pagoRosa.id_pago}/comprobante`, { headers: { Authorization: `Bearer ${tokens.caja}` } });
+    assert.equal(pdf.status, 200);
+  });
+
+  test('pago inexistente o sin sesión', async () => {
+    assert.equal((await api('GET', '/api/pagos/999999/comprobante', { token: tokens.caja })).status, 404);
+    assert.equal((await api('GET', '/api/pagos/999999/whatsapp', { token: tokens.caja })).status, 404);
+    assert.equal((await fetch(`${urlBase}/api/pagos/1/comprobante`)).status, 401);
+  });
+});
+
 describe('Errores generales', () => {
   test('un JSON mal escrito responde 400, no 500', async () => {
     const respuesta = await fetch(urlBase + '/api/auth/login', {
