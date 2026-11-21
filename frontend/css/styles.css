@@ -231,6 +231,14 @@ body {
   padding: 0.4rem;
 }
 
+/* 13. Impresión del cuadre de caja (Sprint 2 · HU-04) */
+@media print {
+  .sigea-navbar,
+  .sigea-no-imprimir { display: none !important; }
+  .sigea-card { box-shadow: none; border: 1px solid #ccc; }
+  body { background: #fff; }
+}
+
 /* 10. Celulares (menos de 576 px) */
 @media (max-width: 575.98px) {
   /* Evita que iOS haga zoom al tocar un campo (lo hace si la letra es < 16 px) */

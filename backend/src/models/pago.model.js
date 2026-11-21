@@ -8,6 +8,7 @@
 const { pool, enTransaccion } = require('../config/db');
 const { ErrorApi } = require('../utils/errores');
 const reglas = require('../services/reglas');
+const { ahora } = require('../utils/fechas');
 
 // Fecha hasta la que está pagado un contrato (null si no tiene pagos vigentes)
 async function pagadoHasta(conexion, idContrato) {
@@ -56,10 +57,13 @@ async function registrar({ id_contrato, meses, monto, medio_pago, nro_operacion,
         throw new ErrorApi(400, texto, { monto: texto });
       }
 
+      // La fecha y hora del cobro la pone la API en hora de Huancayo (no la del
+      // servidor MySQL, que en la nube suele estar en UTC): así el cuadre del día cuadra.
+      const fechaPago = ahora();
       const [resultado] = await conexion.execute(
-        `INSERT INTO pago (id_contrato, monto, periodo_desde, periodo_hasta, medio_pago, nro_operacion, id_usuario)
-         VALUES (?, ?, ?, ?, ?, ?, ?)`,
-        [id_contrato, monto, periodo.periodo_desde, periodo.periodo_hasta,
+        `INSERT INTO pago (id_contrato, fecha_pago, monto, periodo_desde, periodo_hasta, medio_pago, nro_operacion, id_usuario)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id_contrato, fechaPago, monto, periodo.periodo_desde, periodo.periodo_hasta,
          medio_pago, nro_operacion, id_usuario]
       );
 
@@ -142,4 +146,25 @@ async function anular({ id_pago, id_usuario, motivo }) {
   });
 }
 
-module.exports = { registrar, historialDeAbonado, anular };
+/**
+ * Sprint 2 · HU-04 · T19: pagos cobrados en un día ("AAAA-MM-DD"), con abonado,
+ * placa y usuario. Incluye los anulados para que el cuadre los muestre aparte.
+ */
+async function pagosDelDia(fecha) {
+  const [filas] = await pool.execute(
+    `SELECT p.id_pago, p.fecha_pago, p.monto, p.medio_pago, p.nro_operacion, p.estado,
+            CONCAT(a.nombres, ' ', a.apellidos) AS abonado, a.id_abonado,
+            v.placa_codigo, u.nombre AS registrado_por
+       FROM pago p
+       JOIN contrato c ON c.id_contrato = p.id_contrato
+       JOIN abonado  a ON a.id_abonado  = c.id_abonado
+       JOIN vehiculo v ON v.id_vehiculo = c.id_vehiculo
+       JOIN usuario  u ON u.id_usuario  = p.id_usuario
+      WHERE p.fecha_pago >= ? AND p.fecha_pago < DATE_ADD(?, INTERVAL 1 DAY)
+      ORDER BY p.fecha_pago, p.id_pago`,
+    [fecha, fecha]
+  );
+  return filas.map(f => ({ ...f, monto: Number(f.monto) }));
+}
+
+module.exports = { registrar, historialDeAbonado, anular, pagosDelDia };

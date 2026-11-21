@@ -32,6 +32,7 @@ const SIGEA = (() => {
     abonados: `${RAIZ}pages/abonados.html`,
     registro: `${RAIZ}pages/registro-abonado.html`,
     salida: `${RAIZ}pages/salida.html`,
+    caja: `${RAIZ}pages/caja.html`,
     pagos: idAbonado => `${RAIZ}pages/pagos.html?id=${encodeURIComponent(idAbonado)}`
   };
 
