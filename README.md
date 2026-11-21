@@ -105,8 +105,8 @@ de los saldos pendientes de los abonados.
 y que pueda pagar sin efectivo y recibir su comprobante.
 
 - **HU-03: Alerta de salida** (terminada): pantalla *Control de salida*.
-- **HU-04: Pago digital** (en proceso).
-- **HU-05: Comprobante digital** (por iniciar).
+- **HU-04: Pago digital**: n.º de operación obligatorio y único, QR del negocio en caja y pantalla *Cuadre de caja*.
+- **HU-05: Comprobante digital**: comprobante PDF con número correlativo y envío por WhatsApp.
 
 Publicación en la nube: ver `docs/DESPLIEGUE.md`.
 
@@ -403,6 +403,7 @@ Funcionalidades implementadas:
 | RN-06 | Contraseñas cifradas con bcrypt; la sesión expira a las 8 horas. |
 | RN-07 | Sprint 2: al consultar una placa en la salida, si el abonado tiene saldo pendiente o está vencido, aparece una alerta roja con el monto y la consulta queda registrada. |
 | RN-08 | Sprint 2: en pagos con Yape, Plin o transferencia el n.º de operación es obligatorio y no se puede repetir. |
+| RN-09 | Sprint 2: cada pago genera un comprobante con número correlativo (C001-000001…) que no se edita; si el pago se anula, el comprobante queda ANULADO. |
 
 **Sprint 2 · HU-03: Alerta de salida**
 
@@ -410,6 +411,12 @@ Funcionalidades implementadas:
 - Alerta roja con el monto adeudado y botón *Registrar pago*; verde si está al día; *cliente por hora* si no es abonado.
 - Cada consulta queda en la tabla `alerta_salida` con fecha, hora y usuario, y se ve en el historial del día.
 - Si ya tienes la base del Sprint 1 con datos, ejecuta una vez `database/migrations/002_alerta_salida.sql`.
+
+**Sprint 2 · HU-04 y HU-05: Pago digital y comprobante**
+
+- Cuadre de caja del día con el total por efectivo, Yape, Plin y transferencia (solo CAJA y GERENCIA).
+- Cada pago genera un comprobante PDF con número correlativo; desde el historial se abre o se envía por WhatsApp.
+- Si ya tienes la base con datos, ejecuta una vez `database/migrations/003_comprobante.sql` (crea los comprobantes de los pagos existentes).
 
 La descripción de cada ruta de la API está en `docs/API.md`.
 La colección de Postman del Sprint 2 está en `docs/SIGEA-Sprint2.postman_collection.json`.
