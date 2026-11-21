@@ -143,6 +143,33 @@ const SIGEA = (() => {
     );
   }
 
+  /**
+   * Sprint 2 · HU-05: descarga un archivo de la API (por ejemplo el PDF del
+   * comprobante) enviando el token, y lo abre en una pestaña nueva.
+   * Un enlace <a href> normal no serviría: no puede enviar el token.
+   */
+  async function abrirArchivo(ruta) {
+    const ventana = window.open('', '_blank'); // se abre ya, para que el navegador no la bloquee
+    let respuesta;
+    try {
+      respuesta = await fetch(SIGEA_CONFIG.API_URL + ruta, {
+        headers: { Authorization: `Bearer ${sesion.token()}` }
+      });
+    } catch {
+      ventana?.close();
+      throw new ErrorSigea('No se pudo conectar con el servidor. Verifique que el backend esté encendido.');
+    }
+    if (!respuesta.ok) {
+      ventana?.close();
+      let datos = {};
+      try { datos = await respuesta.json(); } catch { /* sin cuerpo */ }
+      throw new ErrorSigea(datos.mensaje || `Error del servidor (${respuesta.status}).`, respuesta.status);
+    }
+    const url = URL.createObjectURL(await respuesta.blob());
+    if (ventana) ventana.location.href = url;
+    else location.href = url;
+  }
+
   /* ---------------------------------------------------------
      4. BARRA SUPERIOR
      Cada página tiene la barra escrita en su HTML. Aquí solo se
@@ -272,7 +299,7 @@ const SIGEA = (() => {
 
   return {
     paginas, sesion, exigirSesion, salir,
-    api, ErrorSigea,
+    api, ErrorSigea, abrirArchivo,
     prepararBarra,
     moneda, fecha, fechaHora,
     el, icono, mostrarAlerta, ocultarAlerta,
