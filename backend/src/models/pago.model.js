@@ -67,6 +67,11 @@ async function registrar({ id_contrato, meses, monto, medio_pago, nro_operacion,
          medio_pago, nro_operacion, id_usuario]
       );
 
+      // RN-09 (Sprint 2 · HU-05): cada pago genera su comprobante con número
+      // correlativo. Se calcula dentro de la misma transacción; FOR UPDATE hace
+      // que dos cajas que cobran a la vez no tomen el mismo número.
+      const comprobante = await emitirComprobante(conexion, resultado.insertId, fechaPago);
+
       return {
         id_pago: resultado.insertId,
         id_abonado: contrato.id_abonado,
@@ -74,7 +79,8 @@ async function registrar({ id_contrato, meses, monto, medio_pago, nro_operacion,
         monto,
         ...periodo,
         medio_pago,
-        nro_operacion
+        nro_operacion,
+        comprobante
       };
     });
   } catch (error) {
@@ -87,6 +93,29 @@ async function registrar({ id_contrato, meses, monto, medio_pago, nro_operacion,
   }
 }
 
+const SERIE = 'C001';
+
+// "C001" + 4 → "C001-000004"
+function codigoComprobante(serie, numero) {
+  return `${serie}-${String(numero).padStart(6, '0')}`;
+}
+
+async function emitirComprobante(conexion, idPago, fechaEmision) {
+  const [filas] = await conexion.execute(
+    `SELECT COALESCE(MAX(numero), 0) + 1 AS siguiente
+       FROM comprobante
+      WHERE serie = ?
+        FOR UPDATE`,
+    [SERIE]
+  );
+  const numero = filas[0].siguiente;
+  await conexion.execute(
+    `INSERT INTO comprobante (id_pago, serie, numero, fecha_emision) VALUES (?, ?, ?, ?)`,
+    [idPago, SERIE, numero, fechaEmision]
+  );
+  return { serie: SERIE, numero, codigo: codigoComprobante(SERIE, numero) };
+}
+
 // Historial de pagos de un abonado, del más reciente al más antiguo (T11)
 async function historialDeAbonado(idAbonado) {
   const [filas] = await pool.execute(
@@ -95,18 +124,24 @@ async function historialDeAbonado(idAbonado) {
             p.fecha_anulacion, p.motivo_anulacion,
             u.nombre  AS registrado_por,
             ua.nombre AS anulado_por,
-            v.placa_codigo, e.codigo AS codigo_espacio
+            v.placa_codigo, e.codigo AS codigo_espacio,
+            cp.serie, cp.numero
        FROM pago p
        JOIN contrato c ON c.id_contrato = p.id_contrato
        JOIN vehiculo v ON v.id_vehiculo = c.id_vehiculo
        JOIN espacio  e ON e.id_espacio  = c.id_espacio
        JOIN usuario  u ON u.id_usuario  = p.id_usuario
        LEFT JOIN usuario ua ON ua.id_usuario = p.anulado_por
+       LEFT JOIN comprobante cp ON cp.id_pago = p.id_pago
       WHERE c.id_abonado = ?
       ORDER BY p.fecha_pago DESC, p.id_pago DESC`,
     [idAbonado]
   );
-  return filas.map(fila => ({ ...fila, monto: Number(fila.monto) }));
+  return filas.map(({ serie, numero, ...fila }) => ({
+    ...fila,
+    monto: Number(fila.monto),
+    comprobante: numero ? codigoComprobante(serie, numero) : null
+  }));
 }
 
 /**
@@ -142,6 +177,8 @@ async function anular({ id_pago, id_usuario, motivo }) {
         WHERE id_pago = ?`,
       [id_usuario, motivo, id_pago]
     );
+    // RN-09: el comprobante no se borra ni se edita; queda ANULADO
+    await conexion.execute(`UPDATE comprobante SET estado = 'ANULADO' WHERE id_pago = ?`, [id_pago]);
     return { id_pago, id_abonado: pago.id_abonado, id_contrato: pago.id_contrato };
   });
 }
@@ -167,4 +204,32 @@ async function pagosDelDia(fecha) {
   return filas.map(f => ({ ...f, monto: Number(f.monto) }));
 }
 
-module.exports = { registrar, historialDeAbonado, anular, pagosDelDia };
+/**
+ * Sprint 2 · HU-05: todos los datos que van en el comprobante de un pago.
+ * Devuelve null si el pago no existe.
+ */
+async function datosComprobante(idPago) {
+  const [filas] = await pool.execute(
+    `SELECT p.id_pago, p.fecha_pago, p.monto, p.periodo_desde, p.periodo_hasta,
+            p.medio_pago, p.nro_operacion, p.estado AS estado_pago,
+            cp.serie, cp.numero, cp.fecha_emision, cp.estado AS estado_comprobante,
+            a.id_abonado, a.nombres, a.apellidos, a.dni, a.celular,
+            v.tipo AS tipo_vehiculo, v.placa_codigo,
+            e.codigo AS codigo_espacio, e.tipo AS tipo_espacio,
+            u.nombre AS registrado_por
+       FROM pago p
+       JOIN comprobante cp ON cp.id_pago = p.id_pago
+       JOIN contrato c ON c.id_contrato = p.id_contrato
+       JOIN abonado  a ON a.id_abonado  = c.id_abonado
+       JOIN vehiculo v ON v.id_vehiculo = c.id_vehiculo
+       JOIN espacio  e ON e.id_espacio  = c.id_espacio
+       JOIN usuario  u ON u.id_usuario  = p.id_usuario
+      WHERE p.id_pago = ?`,
+    [idPago]
+  );
+  if (!filas[0]) return null;
+  const f = filas[0];
+  return { ...f, monto: Number(f.monto), codigo: codigoComprobante(f.serie, f.numero) };
+}
+
+module.exports = { registrar, historialDeAbonado, anular, pagosDelDia, datosComprobante, codigoComprobante };
