@@ -549,6 +549,45 @@ describe('HU-03 · Alerta de salida (Sprint 2 · RN-07)', () => {
   });
 });
 
+describe('HU-04 · Cuadre del día (Sprint 2 · T19)', () => {
+  const pagar = cuerpo => api('POST', '/api/pagos', { token: tokens.caja, cuerpo });
+
+  test('CP-17 · el cuadre suma los pagos del día por medio de pago', async () => {
+    const antes = (await api('GET', '/api/caja/cuadre', { token: tokens.caja })).datos;
+
+    assert.equal((await pagar({ id_contrato: 2, meses: 1, monto: 150, medio_pago: 'PLIN', nro_operacion: 'PL-20261121' })).status, 201);
+    assert.equal((await pagar({ id_contrato: 1, meses: 1, monto: 200, medio_pago: 'EFECTIVO' })).status, 201);
+
+    const r = await api('GET', `/api/caja/cuadre?fecha=${hoy()}`, { token: tokens.gerencia });
+    assert.equal(r.status, 200);
+    const d = r.datos;
+    const medio = (x, nombre) => x.por_medio.find(m => m.medio === nombre);
+    assert.equal(d.fecha, hoy());
+    assert.equal(d.cantidad, antes.cantidad + 2);
+    assert.equal(d.total, antes.total + 350);
+    assert.equal(medio(d, 'PLIN').total, medio(antes, 'PLIN').total + 150);
+    assert.equal(medio(d, 'EFECTIVO').total, medio(antes, 'EFECTIVO').total + 200);
+    // La suma de los medios es igual al total y los anulados no suman
+    assert.equal(d.por_medio.reduce((s, m) => s + m.total, 0), d.total);
+    assert.equal(d.pagos.filter(p => p.estado === 'REGISTRADO').length, d.cantidad);
+    assert.ok(d.pagos.every(p => p.fecha_pago.startsWith(hoy())));
+  });
+
+  test('el cuadre muestra los 4 medios aunque no tengan pagos y rechaza fechas inválidas', async () => {
+    const r = await api('GET', '/api/caja/cuadre?fecha=2020-01-01', { token: tokens.caja });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.datos.por_medio.map(m => m.medio), ['EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA']);
+    assert.equal(r.datos.total, 0);
+    const mala = await api('GET', '/api/caja/cuadre?fecha=2026-13-01', { token: tokens.caja });
+    assert.equal(mala.status, 400);
+  });
+
+  test('RN-05 · el rol OPERATIVO no puede ver el cuadre de caja', async () => {
+    const r = await api('GET', '/api/caja/cuadre', { token: tokens.operativo });
+    assert.equal(r.status, 403);
+  });
+});
+
 describe('Errores generales', () => {
   test('un JSON mal escrito responde 400, no 500', async () => {
     const respuesta = await fetch(urlBase + '/api/auth/login', {
