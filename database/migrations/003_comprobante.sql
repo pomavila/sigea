@@ -32,9 +32,12 @@ CREATE TABLE IF NOT EXISTS comprobante (
         ON DELETE RESTRICT ON UPDATE CASCADE
 ) ENGINE=InnoDB;
 
+-- Si ya hay comprobantes, la numeración continúa desde el último (se puede ejecutar más de una vez)
+SET @ultimo := (SELECT COALESCE(MAX(numero), 0) FROM comprobante WHERE serie = 'C001');
+
 INSERT INTO comprobante (id_pago, serie, numero, fecha_emision, estado)
 SELECT p.id_pago, 'C001',
-       ROW_NUMBER() OVER (ORDER BY p.id_pago),
+       @ultimo + ROW_NUMBER() OVER (ORDER BY p.id_pago),
        p.fecha_pago,
        IF(p.estado = 'ANULADO', 'ANULADO', 'EMITIDO')
   FROM pago p
