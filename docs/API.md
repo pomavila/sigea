@@ -54,6 +54,9 @@ El token se obtiene en el inicio de sesión y dura 8 horas (RN-06).
 | GET | `/salida/verificar?placa=` | con sesión | Sprint 2 · HU-03: consulta la deuda de una placa sin registrar nada |
 | POST | `/salida` | con sesión | Sprint 2 · HU-03: consulta la placa y registra la alerta (RN-07) |
 | GET | `/alertas?fecha=` | con sesión | Sprint 2 · HU-03: historial de alertas del día con totales |
+| GET | `/caja/cuadre?fecha=` | CAJA, GERENCIA | Sprint 2 · HU-04: total cobrado en el día por medio de pago |
+| GET | `/pagos/:id/comprobante` | con sesión | Sprint 2 · HU-05: comprobante del pago en PDF (RN-09) |
+| GET | `/pagos/:id/whatsapp` | con sesión | Sprint 2 · HU-05: enlace de WhatsApp con los datos del comprobante |
 
 ## Ejemplos
 
@@ -176,4 +179,35 @@ La placa se reconoce con o sin guion y en minúsculas.
 ```
 
 Responde `201` con lo mismo que `/salida/verificar` más `id_alerta` y `fecha_hora` (hora de Huancayo).
+
+### GET /caja/cuadre?fecha=2026-11-21 (Sprint 2 · HU-04)
+
+```json
+{
+  "fecha": "2026-11-21",
+  "cantidad": 2,
+  "total": 350,
+  "por_medio": [
+    { "medio": "EFECTIVO", "cantidad": 1, "total": 200 },
+    { "medio": "YAPE", "cantidad": 0, "total": 0 },
+    { "medio": "PLIN", "cantidad": 1, "total": 150 },
+    { "medio": "TRANSFERENCIA", "cantidad": 0, "total": 0 }
+  ],
+  "anulados": { "cantidad": 0, "total": 0 },
+  "pagos": [ "…detalle de cada pago…" ]
+}
+```
+
+### GET /pagos/:id/comprobante (Sprint 2 · HU-05)
+
+Responde el PDF (`Content-Type: application/pdf`) con el número correlativo `C001-000001`.
+Cada pago genera su comprobante al registrarse (RN-09); si el pago se anula, el PDF sale marcado como **ANULADO**.
+
+### GET /pagos/:id/whatsapp (Sprint 2 · HU-05)
+
+```json
+{ "comprobante": "C001-000005", "celular": "9XXXXXXXX", "mensaje": "Hola, …", "url": "https://wa.me/519XXXXXXXX?text=…" }
+```
+
+Responde `409` si el abonado no tiene celular registrado.
 

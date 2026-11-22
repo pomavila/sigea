@@ -92,3 +92,9 @@ VALUES
 (3, 3, DATE_SUB(NOW(), INTERVAL 75 DAY),  60.00,
     DATE_SUB(CURDATE(), INTERVAL 75 DAY), DATE_SUB(CURDATE(), INTERVAL 45 DAY),
     'TRANSFERENCIA', '8847731', 2);
+
+-- ---------------------------------------------------------------------
+-- 7. COMPROBANTES (Sprint 2 · RN-09): uno por cada pago, en orden
+-- ---------------------------------------------------------------------
+INSERT INTO comprobante (id_pago, serie, numero, fecha_emision)
+SELECT id_pago, 'C001', id_pago, fecha_pago FROM pago ORDER BY id_pago;

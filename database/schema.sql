@@ -180,3 +180,22 @@ CREATE TABLE alerta_salida (
 
 -- Historial de alertas del día (pantalla Control de salida)
 CREATE INDEX idx_alerta_fecha ON alerta_salida (fecha_hora);
+
+-- ---------------------------------------------------------------------
+-- 8. COMPROBANTE  (Sprint 2 · HU-05 · T21 · RN-09)
+--    Cada pago genera un comprobante interno con numeración correlativa
+--    (serie C001). No se edita: si el pago se anula, queda ANULADO.
+-- ---------------------------------------------------------------------
+CREATE TABLE comprobante (
+    id_comprobante  INT UNSIGNED  NOT NULL AUTO_INCREMENT,
+    id_pago         INT UNSIGNED  NOT NULL,
+    serie           CHAR(4)       NOT NULL DEFAULT 'C001',
+    numero          INT UNSIGNED  NOT NULL,           -- correlativo dentro de la serie
+    fecha_emision   DATETIME      NOT NULL,
+    estado          ENUM('EMITIDO','ANULADO') NOT NULL DEFAULT 'EMITIDO',
+    CONSTRAINT pk_comprobante PRIMARY KEY (id_comprobante),
+    CONSTRAINT uq_comprobante_pago UNIQUE (id_pago),           -- 1 pago = 1 comprobante
+    CONSTRAINT uq_comprobante_numero UNIQUE (serie, numero),   -- sin números repetidos
+    CONSTRAINT fk_comprobante_pago FOREIGN KEY (id_pago) REFERENCES pago (id_pago)
+        ON DELETE RESTRICT ON UPDATE CASCADE
+) ENGINE=InnoDB;

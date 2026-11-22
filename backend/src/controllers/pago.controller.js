@@ -8,6 +8,7 @@ const pagoModel = require('../models/pago.model');
 const cobranza = require('../services/cobranza');
 const { validarPago, validarAnulacion } = require('../validators/pago.validator');
 const { leerId } = require('../utils/errores');
+const comprobante = require('../services/comprobante');
 
 // POST /api/pagos  →  registra un pago y devuelve cómo quedó el abonado
 async function registrar(req, res) {
@@ -63,4 +64,20 @@ async function saldo(req, res) {
   });
 }
 
-module.exports = { registrar, anular, historial, saldo };
+// GET /api/pagos/:id/comprobante  →  PDF del comprobante (Sprint 2 · HU-05 · T21)
+async function comprobantePdf(req, res) {
+  const { codigo, pdf } = await comprobante.generarPdf(leerId(req.params.id));
+  res.set({
+    'Content-Type': 'application/pdf',
+    'Content-Disposition': `inline; filename="${codigo}.pdf"`,
+    'Content-Length': pdf.length
+  });
+  res.send(pdf);
+}
+
+// GET /api/pagos/:id/whatsapp  →  enlace wa.me con los datos del comprobante (T22)
+async function whatsapp(req, res) {
+  res.json(await comprobante.enlaceWhatsapp(leerId(req.params.id)));
+}
+
+module.exports = { registrar, anular, historial, saldo, comprobantePdf, whatsapp };

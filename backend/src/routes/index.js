@@ -21,6 +21,9 @@
    GET     /salida/verificar?placa=    cualquier usuario con sesión (Sprint 2 · HU-03)
    POST    /salida                     cualquier usuario con sesión (registra la alerta)
    GET     /alertas?fecha=             cualquier usuario con sesión
+   GET     /caja/cuadre?fecha=         CAJA, GERENCIA   (Sprint 2 · HU-04)
+   GET     /pagos/:id/comprobante      cualquier usuario con sesión (Sprint 2 · HU-05, PDF)
+   GET     /pagos/:id/whatsapp         cualquier usuario con sesión (enlace wa.me)
    ========================================================= */
 
 'use strict';
@@ -32,6 +35,7 @@ const authRoutes = require('./auth.routes');
 const abonadoController = require('../controllers/abonado.controller');
 const pagoController = require('../controllers/pago.controller');
 const salidaController = require('../controllers/salida.controller');
+const cajaController = require('../controllers/caja.controller');
 
 const router = Router();
 
@@ -63,9 +67,16 @@ router.get('/abonados/:id/saldo', pagoController.saldo);
 router.post('/pagos', puedeEscribir, pagoController.registrar);
 router.post('/pagos/:id/anular', permitirRoles(ROLES.GERENCIA), pagoController.anular);
 
+// HU-05 · Comprobante digital (RN-09)
+router.get('/pagos/:id/comprobante', pagoController.comprobantePdf);
+router.get('/pagos/:id/whatsapp', pagoController.whatsapp);
+
 // HU-03 · Alerta de salida (RN-07). La caja y el área operativa controlan la salida.
 router.get('/salida/verificar', salidaController.verificar);
 router.post('/salida', salidaController.registrar);
 router.get('/alertas', salidaController.alertas);
+
+// HU-04 · Cuadre del día por medio de pago (T19). Solo quien cobra o supervisa la caja.
+router.get('/caja/cuadre', puedeEscribir, cajaController.cuadre);
 
 module.exports = router;

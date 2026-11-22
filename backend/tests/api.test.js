@@ -378,6 +378,17 @@ describe('HU-02 · Pagos y saldo', () => {
     assert.equal(saldo.datos.saldo_pendiente, 0);
   });
 
+  test('RN-08 · un pago con Yape, Plin o transferencia exige n.º de operación', async () => {
+    for (const medio of ['YAPE', 'PLIN', 'TRANSFERENCIA']) {
+      const r = await api('POST', '/api/pagos', {
+        token: tokens.caja,
+        cuerpo: { id_contrato: 5, meses: 1, monto: 200, medio_pago: medio, nro_operacion: '  ' }
+      });
+      assert.equal(r.status, 400, medio);
+      assert.ok(r.datos.errores.nro_operacion, medio);
+    }
+  });
+
   test('no acepta el mismo número de operación en otro pago', async () => {
     const r = await api('POST', '/api/pagos', {
       token: tokens.caja,
@@ -535,6 +546,112 @@ describe('HU-03 · Alerta de salida (Sprint 2 · RN-07)', () => {
     assert.equal(fecha.status, 400);
     const sinToken = await api('POST', '/api/salida', { cuerpo: { placa: '4521-MT' } });
     assert.equal(sinToken.status, 401);
+  });
+});
+
+describe('HU-04 · Cuadre del día (Sprint 2 · T19)', () => {
+  const pagar = cuerpo => api('POST', '/api/pagos', { token: tokens.caja, cuerpo });
+
+  test('CP-17 · el cuadre suma los pagos del día por medio de pago', async () => {
+    const antes = (await api('GET', '/api/caja/cuadre', { token: tokens.caja })).datos;
+
+    assert.equal((await pagar({ id_contrato: 2, meses: 1, monto: 150, medio_pago: 'PLIN', nro_operacion: 'PL-20261121' })).status, 201);
+    assert.equal((await pagar({ id_contrato: 1, meses: 1, monto: 200, medio_pago: 'EFECTIVO' })).status, 201);
+
+    const r = await api('GET', `/api/caja/cuadre?fecha=${hoy()}`, { token: tokens.gerencia });
+    assert.equal(r.status, 200);
+    const d = r.datos;
+    const medio = (x, nombre) => x.por_medio.find(m => m.medio === nombre);
+    assert.equal(d.fecha, hoy());
+    assert.equal(d.cantidad, antes.cantidad + 2);
+    assert.equal(d.total, antes.total + 350);
+    assert.equal(medio(d, 'PLIN').total, medio(antes, 'PLIN').total + 150);
+    assert.equal(medio(d, 'EFECTIVO').total, medio(antes, 'EFECTIVO').total + 200);
+    // La suma de los medios es igual al total y los anulados no suman
+    assert.equal(d.por_medio.reduce((s, m) => s + m.total, 0), d.total);
+    assert.equal(d.pagos.filter(p => p.estado === 'REGISTRADO').length, d.cantidad);
+    assert.ok(d.pagos.every(p => p.fecha_pago.startsWith(hoy())));
+  });
+
+  test('el cuadre muestra los 4 medios aunque no tengan pagos y rechaza fechas inválidas', async () => {
+    const r = await api('GET', '/api/caja/cuadre?fecha=2020-01-01', { token: tokens.caja });
+    assert.equal(r.status, 200);
+    assert.deepEqual(r.datos.por_medio.map(m => m.medio), ['EFECTIVO', 'YAPE', 'PLIN', 'TRANSFERENCIA']);
+    assert.equal(r.datos.total, 0);
+    const mala = await api('GET', '/api/caja/cuadre?fecha=2026-13-01', { token: tokens.caja });
+    assert.equal(mala.status, 400);
+  });
+
+  test('RN-05 · el rol OPERATIVO no puede ver el cuadre de caja', async () => {
+    const r = await api('GET', '/api/caja/cuadre', { token: tokens.operativo });
+    assert.equal(r.status, 403);
+  });
+});
+
+describe('HU-05 · Comprobante digital (Sprint 2 · RN-09)', () => {
+  const pagar = cuerpo => api('POST', '/api/pagos', { token: tokens.caja, cuerpo });
+  let pagoRosa;
+
+  test('RN-09 · cada pago genera un comprobante con número correlativo', async () => {
+    const r1 = await pagar({ id_contrato: 5, meses: 1, monto: 200, medio_pago: 'EFECTIVO' });
+    const r2 = await pagar({ id_contrato: 1, meses: 1, monto: 200, medio_pago: 'YAPE', nro_operacion: 'YP-HU05-0001' });
+    assert.equal(r1.status, 201); assert.equal(r2.status, 201);
+    const c1 = r1.datos.pago.comprobante, c2 = r2.datos.pago.comprobante;
+    assert.match(c1.codigo, /^C001-\d{6}$/);
+    assert.equal(c2.numero, c1.numero + 1);
+    pagoRosa = r2.datos.pago;
+
+    const historial = await api('GET', '/api/abonados/1/pagos', { token: tokens.caja });
+    assert.equal(historial.datos.pagos.find(p => p.id_pago === pagoRosa.id_pago).comprobante, c2.codigo);
+  });
+
+  test('CP-18 · el comprobante se descarga en PDF', async () => {
+    const respuesta = await fetch(`${urlBase}/api/pagos/${pagoRosa.id_pago}/comprobante`, {
+      headers: { Authorization: `Bearer ${tokens.caja}` }
+    });
+    assert.equal(respuesta.status, 200);
+    assert.equal(respuesta.headers.get('content-type'), 'application/pdf');
+    assert.match(respuesta.headers.get('content-disposition'), new RegExp(pagoRosa.comprobante.codigo));
+    const bytes = Buffer.from(await respuesta.arrayBuffer());
+    assert.equal(bytes.subarray(0, 5).toString(), '%PDF-');
+    assert.ok(bytes.length > 1000);
+  });
+
+  test('CP-19 · arma el enlace de WhatsApp con el celular y los datos del pago', async () => {
+    const r = await api('GET', `/api/pagos/${pagoRosa.id_pago}/whatsapp`, { token: tokens.caja });
+    assert.equal(r.status, 200);
+    assert.ok(r.datos.url.startsWith('https://wa.me/51987654321?text='));
+    const texto = decodeURIComponent(r.datos.url.split('?text=')[1]);
+    assert.match(texto, new RegExp(pagoRosa.comprobante.codigo));
+    assert.match(texto, /S\/ 200\.00/);
+    assert.match(texto, /Op\. YP-HU05-0001/);
+  });
+
+  test('sin celular registrado no se puede enviar por WhatsApp (409)', async () => {
+    // Una prueba anterior le puso celular al abonado 5: aquí se le quita
+    await pool.execute('UPDATE abonado SET celular = NULL WHERE id_abonado = 5');
+    const historial = await api('GET', '/api/abonados/5/pagos', { token: tokens.caja });
+    const idPago = historial.datos.pagos[0].id_pago;
+    const r = await api('GET', `/api/pagos/${idPago}/whatsapp`, { token: tokens.caja });
+    assert.equal(r.status, 409);
+    assert.match(r.datos.mensaje, /celular/);
+  });
+
+  test('RN-09 · si el pago se anula, el comprobante queda anulado', async () => {
+    const anular = await api('POST', `/api/pagos/${pagoRosa.id_pago}/anular`, {
+      token: tokens.gerencia, cuerpo: { motivo: 'Prueba de anulación del comprobante' }
+    });
+    assert.equal(anular.status, 200);
+    const r = await api('GET', `/api/pagos/${pagoRosa.id_pago}/whatsapp`, { token: tokens.caja });
+    assert.match(decodeURIComponent(r.datos.url), /ANULADO/);
+    const pdf = await fetch(`${urlBase}/api/pagos/${pagoRosa.id_pago}/comprobante`, { headers: { Authorization: `Bearer ${tokens.caja}` } });
+    assert.equal(pdf.status, 200);
+  });
+
+  test('pago inexistente o sin sesión', async () => {
+    assert.equal((await api('GET', '/api/pagos/999999/comprobante', { token: tokens.caja })).status, 404);
+    assert.equal((await api('GET', '/api/pagos/999999/whatsapp', { token: tokens.caja })).status, 404);
+    assert.equal((await fetch(`${urlBase}/api/pagos/1/comprobante`)).status, 401);
   });
 });
 
